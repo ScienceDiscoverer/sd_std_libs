@@ -1,0 +1,531 @@
+#pragma once
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+//#include <sddb>
+
+#ifdef DEBUG
+#pragma comment( lib, "txtd" )
+#else
+#pragma comment( lib, "txt" )
+#endif
+
+typedef unsigned long long int ui64;
+typedef signed long long int i64;
+typedef unsigned int ui32;
+typedef signed int i32;
+typedef unsigned short int ui16;
+typedef signed short int i16;
+typedef unsigned char ui8;
+typedef signed char i8;
+
+typedef unsigned long int uli32;
+typedef signed long int li32;
+
+#ifndef TXT_MULTI_THREAD_MODE
+#define HEAP_FLAGS HEAP_NO_SERIALIZE
+#else
+#define HEAP_FLAGS 0
+#endif
+
+#define TXT_UTF8
+
+#define NFND 0xFFFFFFFFFFFFFFFF // Text was not found
+#define RALL 0xFFFFFFFFFFFFFFFF // Replace everything from pos to end of text
+#define DALL 0xFFFFFFFFFFFFFFFF // Delete everything from pos to end of text
+#define TXT_CONCAT_MULT 2
+
+#define EXCEPTION_TXTI_BUFF_OVERRUN 0xE0000001
+#define EXCEPTION_TXTO_BUFF_OVERRUN 0xE0000002
+#define EXCEPTION_T2I_NON_NUMBER    0xE0000003
+#define EXCEPTION_H2I_NON_NUMBER    0xE0000004
+#define EXCEPTION_T2I_OVERFLOW      0xE0000005
+#define EXCEPTION_H2I_OVERFLOW      0xE0000006
+
+#define EXCEPT_TXT_UTF8  0
+#define EXCEPT_TXT_UTF16 1
+
+/* class EmptyTxt
+{
+	EmptyTxt() = default;
+	~EmptyTxt() = default;
+	
+	EmptyTxt(const StdPrinter& other) = delete;
+	EmptyTxt(StdPrinter&& other) = delete;
+	EmptyTxt operator=(const StdPrinter& other) = delete;
+	EmptyTxt operator=(StdPrinter&& other) = delete;
+}; */
+
+class txt
+{
+public:
+	txt();
+	txt(const txt &o);
+	txt(txt &&o);
+	txt(const char *cs);
+	txt(char c);
+	txt(ui64 ui);
+	txt(i64 i);
+	txt(i32 i);
+	
+	~txt();
+	
+	txt & operator=(const txt &o);
+	txt & operator=(txt &&o);
+	txt & operator=(const char *cs);
+	txt & operator=(char c);
+	txt & operator=(ui64 ui);
+	txt & operator=(i64 i);
+	txt & operator=(i32 i);
+	
+	char & operator[](ui64 i);
+	const char & operator[](ui64 i) const;
+	
+	txt & operator+=(const txt &o);
+	txt & operator+=(const char *cs);
+	txt & operator+=(char c);
+	
+	operator const char *() const;
+	operator char *();
+	
+	ui64 operator~() const;	// Size operator
+	uli32 * operator*();	// Size modification operator
+	ui64 operator!() const;	// True Size Operator
+	txt & operator++();		// Size update operator
+	txt & operator--();		// Trimm operator
+	
+	friend bool operator==(const txt &t0, const txt &t1);
+	friend bool operator!=(const txt &t0, const txt &t1);
+	friend bool operator==(const txt &t, const char *cs);
+	friend bool operator!=(const txt &t, const char *cs);
+	friend bool operator==(const char *cs, const txt &t);
+	friend bool operator!=(const char *cs, const txt &t);
+	friend bool operator==(const txt &t, char c);
+	friend bool operator!=(const txt &t, char c);
+	friend bool operator==(char c, const txt &t);
+	friend bool operator!=(char c, const txt &t);
+	friend bool operator==(const txt &t, void (*empty_func)(void));
+	friend bool operator!=(const txt &t, void (*empty_func)(void));
+	friend bool operator==(void (*empty_func)(void), const txt &t);
+	friend bool operator!=(void (*empty_func)(void), const txt &t);
+	friend ui64 operator>>(const txt &fnd, const txt &t);
+	friend ui64 operator>>(const char *fnd, const txt &t);
+	friend ui64 operator>>(char fnd, const txt &t);
+	friend ui64 operator<<(const txt &fnd, const txt &t);
+	friend ui64 operator<<(const char *fnd, const txt &t);
+	friend ui64 operator<<(char fnd, const txt &t);
+	friend ui64 txtf(const txt &t, ui64 pos, const txt &fnd);
+	friend ui64 txtf(const txt &t, ui64 pos, const char *fnd);
+	friend ui64 txtf(const txt &t, ui64 pos, char fnd);
+	friend ui64 txtfe(const txt &t, ui64 pos, const txt &fnd);
+	friend ui64 txtfe(const txt &t, ui64 pos, const char *fnd);
+	friend ui64 txtfe(const txt &t, ui64 pos, char fnd);
+	friend txt & txti(txt &t, ui64 pos,  const txt &ins);
+	friend txt & txti(txt &t, ui64 pos,  const char *ins);
+	friend txt & txti(txt &t, ui64 pos,  char ins);
+	friend txt & txto(txt &t, ui64 pos,  const txt &ovr);
+	friend txt & txto(txt &t, ui64 pos,  const char *ovr);
+	friend txt & txto(txt &t, ui64 pos,  char ovr);
+	friend ui64 t2i(const txt &t);
+	friend ui64 h2i(const txt &t);
+	friend txt & txtr(txt &t, ui64 pos, ui64 n, const txt &rep);
+	friend txt & txtr(txt &t, ui64 pos, ui64 n, const char *rep);
+	friend txt & txtr(txt &t, ui64 pos, ui64 n, char rep);
+	friend txt & txtd(txt &t, ui64 pos, ui64 n);
+	
+private:
+	static ui64 Sl(const char *cs);
+	static char * AllocTmp(ui64 s, ui64 *nts);
+	void Alloc(ui64 s);
+	txt & Move(txt &o);
+	void ExceptBuff(DWORD c, ui64 pos) const;
+	void ExceptNum(DWORD c) const;
+	
+private:
+	static HANDLE h;
+	ui64 ts;
+	ui64 s;
+	char *t;
+};
+
+inline txt::txt()
+{
+	s = 0;
+	Alloc(0);
+}
+
+inline txt::txt(const txt &o)
+{
+	s = o.s;
+	Alloc(s);
+	memcpy(t, o.t, s);
+}
+
+inline txt::txt(txt &&o)
+{
+	ts = o.ts;
+	s = o.s;
+	t = o.t;
+	o.ts = 0;
+	o.s = 0;
+	o.t = NULL;
+}
+
+inline txt::txt(const char *cs) // x5.19 VS STD Allocating Big Strings Test
+{
+	s = Sl(cs);       // 22.03%  257.670'500 ms
+	Alloc(s);         // 49.01%  573.220'900 ms
+	memcpy(t, cs, s); // 28.96%  338.733'200 ms
+}
+
+inline txt::txt(char c) // x5.02 VS STD
+{
+	s = 1;
+	Alloc(1);
+	t[0] = c;
+}
+
+inline txt::txt(ui64 ui)
+{
+	s = 0;
+	Alloc(ui);
+}
+
+inline txt::txt(i64 i)
+{
+	s = 0;
+	Alloc(i & 0x8000000000000000 ? 0ull : (ui64)i);
+}
+
+inline txt::txt(i32 i)
+{
+	s = 0;
+	Alloc(i & 0x80000000 ? 0ull : (ui64)i);
+}
+
+inline txt::~txt()
+{
+	if(ts > 0x400)
+	{
+		VirtualFree(t, 0, MEM_RELEASE);
+	}
+	else
+	{
+		HeapFree(h, 0, t);
+	}
+}
+
+inline txt & txt::operator=(const txt &o)
+{
+	if(ts <= o.s)
+	{
+		this->txt::~txt();
+		Alloc(o.s);
+	}
+	s = o.s;
+	memcpy(t, o.t, s);
+	t[s] = 0;
+	
+	return *this;
+}
+
+inline txt & txt::operator=(txt &&o)
+{
+	ts = o.ts;
+	s = o.s;
+	t = o.t;
+	o.ts = 0;
+	o.s = 0;
+	o.t = NULL;
+	
+	return *this;
+}
+
+inline txt & txt::operator=(const char *cs)
+{
+	ui64 ss = Sl(cs);  // -------+
+	if(ts <= ss)       //        |
+	{                  //        |
+		this->txt::~txt();  //   |
+		Alloc(ss);  // <---------+------ I copypasted and forgot to put ss here instead of s...
+	}
+	s = ss;
+	memcpy(t, cs, s);
+	t[s] = 0;
+	
+	return *this;
+}
+
+inline txt & txt::operator=(char c)
+{
+	s = 1;
+	t[0] = c;
+	t[1] = 0;
+	
+	return *this;
+}
+
+inline txt & txt::operator=(ui64 ui)
+{
+	if(ts < ui+1)
+	{
+		this->txt::~txt();
+		Alloc(ui);
+	}
+	else
+	{
+		t[0] = 0;
+	}
+	
+	s = 0;
+	
+	return *this;
+}
+
+inline txt & txt::operator=(i64 i)
+{
+	return operator=(i & 0x8000000000000000 ? 0ull : (ui64)i);
+}
+
+inline txt & txt::operator=(i32 i)
+{
+	return operator=(i & 0x80000000 ? 0ull : (ui64)i);
+}
+
+inline char & txt::operator[](ui64 i)
+{
+	return t[i];
+}
+
+inline const char & txt::operator[](ui64 i) const
+{
+	return t[i];
+}
+
+inline txt::operator const char *() const
+{
+	return (const char *)t;
+}
+
+inline txt::operator char *()
+{
+	return t;
+}
+
+inline ui64 txt::operator~() const
+{
+	return s;
+}
+
+inline uli32 * txt::operator*()
+{
+	return (uli32 *)(&s);
+}
+
+inline ui64 txt::operator!() const
+{
+	return ts;
+}
+
+inline txt & txt::operator++()
+{
+	s = txt::Sl(t);
+	return *this;
+}
+
+inline ui64 txt::Sl(const char *cs)
+{
+	const char *sbeg = cs--;
+	while(*(++cs) != 0)
+	{
+		;
+	}
+	
+	return ui64(cs - sbeg);
+}
+
+inline void txt::Alloc(ui64 sz)
+{
+	if(++sz > 0x400)
+	{
+		ts = sz; // VirtualAlloc will zero memory by default
+		t = (char *)VirtualAlloc(NULL, ts, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	}
+	else
+	{
+		ts = sz + (0x8 - sz % 0x8); // MSVC Optim.: 0004e  48 83 e0 f8   and rax, -8
+		// 00057  4c 8d 40 08  lea  r8, QWORD PTR [rax+8]
+		t = (char *)HeapAlloc(h, HEAP_ZERO_MEMORY, ts);
+	}
+}
+
+inline char * txt::AllocTmp(ui64 sz, ui64 *nts)
+{
+	if(++sz > 0x400)
+	{
+		*nts = sz;
+		return (char *)VirtualAlloc(NULL, *nts, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	}
+	else
+	{
+		*nts = sz + (0x8 - sz % 0x8);
+		return (char *)HeapAlloc(h, HEAP_ZERO_MEMORY, *nts);
+	}
+}
+
+inline txt & txt::Move(txt &o)
+{
+	ts = o.ts;
+	s = o.s;
+	t = o.t;
+	o.ts = 0;
+	o.s = 0;
+	o.t = NULL;
+	
+	return *this;
+}
+
+inline txt operator+(txt t0, const txt &t1)
+{
+	return t0 += t1;
+}
+
+inline txt operator+(const char *cs, const txt &t)
+{
+	return txt(cs) += t;
+}
+
+inline txt operator+(txt t, const char *cs)
+{
+	return t += cs;
+}
+
+inline txt operator+(char c, const txt &t)
+{
+	return txt(c) += t;
+}
+
+inline txt operator+(txt t, char c)
+{
+	return t += c;
+}
+
+inline bool operator==(const txt &t0, const txt &t1)
+{
+	return t0.s == t1.s ? !memcmp(t0.t, t1.t, t0.s) : false;
+}
+
+inline bool operator!=(const txt &t0, const txt &t1)
+{
+	return t0.s != t1.s ? true : (bool)memcmp(t0.t, t1.t, t0.s);
+}
+
+inline bool operator==(const char *cs, const txt &t)
+{
+	ui64 ss = txt::Sl(cs);
+	return ss == t.s ? !memcmp(cs, t.t, ss) : false;
+}
+
+inline bool operator!=(const char *cs, const txt &t)
+{
+	ui64 ss = txt::Sl(cs);
+	return ss != t.s ? true : (bool)memcmp(cs, t.t, ss);
+}
+
+inline bool operator==(const txt &t, const char *cs)
+{
+	ui64 ss = txt::Sl(cs);
+	return ss == t.s ? !memcmp(cs, t.t, ss) : false;
+}
+
+inline bool operator!=(const txt &t, const char *cs)
+{
+	ui64 ss = txt::Sl(cs);
+	return ss != t.s ? true : (bool)memcmp(cs, t.t, ss);
+}
+
+inline bool operator==(const txt &t, char c)
+{
+	return t.t[0] == c && t.s == 1;
+}
+
+inline bool operator!=(const txt &t, char c)
+{
+	return t.t[0] != c || t.s != 1;
+}
+
+inline bool operator==(char c, const txt &t)
+{
+	return t.t[0] == c && t.s == 1;
+}
+
+inline bool operator!=(char c, const txt &t)
+{
+	return t.t[0] != c || t.s != 1;
+}
+
+#pragma warning( suppress : 4100 ) // 'empty_func': unreferenced formal parameter
+inline bool operator==(const txt &t, void (*empty_func)(void))
+{
+	return t.s == 0;
+}
+
+#pragma warning( suppress : 4100 )
+inline bool operator!=(const txt &t, void (*empty_func)(void))
+{
+	return t.s != 0;
+}
+
+#pragma warning( suppress : 4100 )
+inline bool operator==(void (*empty_func)(void), const txt &t)
+{
+	return t.s == 0;
+}
+
+#pragma warning( suppress : 4100 )
+inline bool operator!=(void (*empty_func)(void), const txt &t)
+{
+	return t.s != 0;
+}
+
+inline txt & txto(txt &t, ui64 pos, char ovr)
+{
+	if(pos >= t.s)
+	{
+		t.ExceptBuff(EXCEPTION_TXTO_BUFF_OVERRUN, pos);
+		return t;
+	}
+	
+	t.t[pos] = ovr;
+
+	return t;
+}
+
+txt i2t(ui64 i);
+txt i2t(ui32 i);
+txt i2t(i64 i);
+txt i2t(i32 i);
+txt i2h(ui64 i);
+txt i2h(ui32 i);
+txt i2h(ui16 i);
+txt i2h(ui8 i);
+
+inline txt i2t(uli32 i)
+{
+	return i2t((ui32)i);
+}
+
+inline txt i2t(li32 i)
+{
+	return i2t((i32)i);
+}
+
+inline txt i2h(uli32 i)
+{
+	return i2h((ui32)i);
+}
+
+#ifndef WTXT_UTF16
+inline void empty() {}
+#endif

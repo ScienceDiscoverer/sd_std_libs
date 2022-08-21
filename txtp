@@ -1,0 +1,424 @@
+#pragma once
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <txt>
+
+#ifdef DEBUG
+#pragma comment( lib, "txtpd" )
+#else
+#pragma comment( lib, "txtp" )
+#endif
+
+#define PL false
+#define PR true
+
+#define TXT_PRINTER
+
+#ifndef STD_PRINTER
+struct PadInfo
+{
+	ui64 length;
+	char padc;
+	bool paddir;
+	ui16 reserved_0;
+	ui32 reserved_1;
+};
+#endif
+
+class TxtPrinter
+{
+public:
+	TxtPrinter();
+	~TxtPrinter() = default;
+	
+	TxtPrinter(const TxtPrinter &other) = delete;
+	TxtPrinter(TxtPrinter &&other) = delete;
+	TxtPrinter operator=(const TxtPrinter &other) = delete;
+	TxtPrinter operator=(TxtPrinter &&other) = delete;
+	
+	TxtPrinter & operator|(ui64 ui);
+	TxtPrinter & operator|(ui32 ui);
+	TxtPrinter & operator|(ui16 ui);
+	TxtPrinter & operator|(i64 i);
+	TxtPrinter & operator|(i32 i);
+	TxtPrinter & operator|(i16 i);
+	TxtPrinter & operator|(wchar_t wc);
+	TxtPrinter & operator|(char c);
+	TxtPrinter & operator|(bool b);
+	/* TODO
+	TxtPrinter &operator|(float f);
+	TxtPrinter &operator|(double d);
+	TxtPrinter &operator|(long double d);
+	*/
+	TxtPrinter & operator|(const void *vp);
+	TxtPrinter & operator|(const char *ccp);
+	
+	TxtPrinter & operator|(const txt& t);
+	
+	TxtPrinter & operator|(TxtPrinter &(*func)(TxtPrinter &txtp));
+	TxtPrinter & operator|(TxtPrinter &txtp);
+	TxtPrinter & operator|(const PadInfo &pi);
+	
+	txt & operator!();
+	
+	friend TxtPrinter & H(TxtPrinter &txtp);  // Next number as hex
+	friend TxtPrinter & S(TxtPrinter &txtp);  // Print Space
+	friend TxtPrinter & N(TxtPrinter &txtp);  // Print Newline
+	friend TxtPrinter & PN(TxtPrinter &txtp); // Pad next number with '/' ' hundreds/bytes
+	friend TxtPrinter & DP(TxtPrinter &txtp); // Disable all padding (sets default values)
+	
+	friend PadInfo SP(const TxtPrinter &tp, ui64 len);						// Set padding length
+	friend PadInfo SP(const TxtPrinter &tp, ui64 len, char pc);				// Set pad. length and fill
+	friend PadInfo SP(const TxtPrinter &tp, ui64 len, char pc, bool pdir);	// Set pad. length, fill and dir.
+	
+	// Manips H - hex, R G B Y V C D - colz, DC EC - disable/enable cursore, S - space, N - newline
+	// P - pause and wait for key to be pressed, MB - set console buffer to max capacity
+	// PN - pad next number by thousands for dec/bytes for hex, SP - set padding
+private:
+	static DWORD Sl(const char *cs);
+	txt PadDec(const txt &dn);
+	txt PadHex(const txt &hn);
+	ui64 PrintPad(ui64 txtl);
+	
+private:
+	txt text;		// Main text buffer
+	ui64 padl;		// General padding length
+	char padc;		// Padding char
+	bool hex;		// Hex numbers mode
+	bool npad;		// Number padding style
+	bool rpad;		// Padding on the right side
+	ui32 reserved;
+};
+
+typedef TxtPrinter txtp;
+
+inline TxtPrinter::TxtPrinter()
+{
+	padl = 0;
+	padc = ' ';
+	hex = false;
+	npad = false;
+	rpad = false;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(ui64 ui)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(ui32 ui)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui); //????
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(ui16 ui)
+{
+	//txt it = hex ? hex = false, i2h(ui) : i2t(ui);
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(i64 i)
+{
+	//txt it = hex ? hex = false, i2h((ui64)i) : i2t(i);
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(i32 i)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(i16 i)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(wchar_t wc)
+{
+	// TODO Improve to convert to unicode UTF-8 multibyte correctly
+	if(rpad)
+	{
+		text += (char)wc;
+		PrintPad(1);
+	}
+	else
+	{
+		PrintPad(1);
+		text += (char)wc;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(char c)
+{
+	if(rpad)
+	{
+		text += c;
+		PrintPad(1);
+	}
+	else
+	{
+		PrintPad(1);
+		text += c;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(bool b)
+{
+	txt btxt = b ? "true" : "false";
+	
+	if(rpad)
+	{
+		text += btxt;
+		PrintPad(~btxt);
+	}
+	else
+	{
+		PrintPad(~btxt);
+		text += btxt;
+	}
+	return *this;
+}
+ /* TODO
+inline TxtPrinter & TxtPrinter::operator|(float f)
+{
+	
+}
+
+inline TxtPrinter & TxtPrinter::operator|(double d)
+{
+	
+}
+
+inline TxtPrinter & TxtPrinter::operator|(long double d)
+{
+	
+}
+*/
+inline TxtPrinter & TxtPrinter::operator|(const void *vp)
+{
+	txt it = i2h((ui64)vp);
+	txti(it, 0, "0x");
+	
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(const char *ccp)
+{
+	ui64 ccpl = Sl(ccp);
+	if(rpad)
+	{
+		text += ccp;
+		PrintPad(ccpl);
+	}
+	else
+	{
+		PrintPad(ccpl);
+		text += ccp;
+	}
+	
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(const txt& t)
+{
+	if(rpad)
+	{
+		text += t;
+		PrintPad(~t);
+	}
+	else
+	{
+		PrintPad(~t);
+		text += t;
+	}
+	return *this;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(TxtPrinter &(*func)(TxtPrinter &txtp))
+{
+	return func(*this);
+}
+
+inline TxtPrinter & TxtPrinter::operator|(TxtPrinter &txtp)
+{
+	return txtp;
+}
+
+inline TxtPrinter & TxtPrinter::operator|(const PadInfo &pi)
+{
+	padl = pi.length;
+	padc = pi.padc;
+	rpad = pi.paddir;
+	return *this;
+}
+
+inline txt & TxtPrinter::operator!()
+{
+	return text;
+}
+
+inline DWORD TxtPrinter::Sl(const char *cs)
+{
+	const char *sbeg = cs--;
+	while(*(++cs) != 0)
+	{
+		;
+	}
+	
+	return DWORD(cs - sbeg);
+}
+
+inline ui64 TxtPrinter::PrintPad(ui64 txtl)
+{
+	
+	if(txtl >= padl)
+	{
+		return 0;
+	}
+	
+	txtl = padl - txtl;
+	txt pad = txtl;
+	memset(pad, padc, txtl);
+	text += ++pad;
+	
+	return txtl;
+}
+
+inline TxtPrinter & H(TxtPrinter &txtp)
+{
+	txtp.hex = true;
+	return txtp;
+}
+
+inline TxtPrinter & S(TxtPrinter &txtp)
+{
+	txtp.text += ' ';
+	return txtp;
+}
+
+inline TxtPrinter & N(TxtPrinter &txtp)
+{
+	txtp.text += '\n';
+	return txtp;
+}
+
+inline TxtPrinter & PN(TxtPrinter &txtp)
+{
+	txtp.npad = true;
+	return txtp;
+}
+
+inline TxtPrinter & DP(TxtPrinter &txtp)
+{
+	txtp.padl = 0;
+	txtp.padc = ' ';
+	txtp.rpad = false;
+	return txtp;
+}
+
+inline PadInfo SP(const TxtPrinter &tp, ui64 len)
+{
+	PadInfo pi;
+	pi.length = len;
+	pi.padc = tp.padc;
+	pi.paddir = tp.rpad;
+	return pi;
+}
+
+inline PadInfo SP(const TxtPrinter &tp, ui64 len, char pc)
+{
+	PadInfo pi;
+	pi.length = len;
+	pi.padc = pc;
+	pi.paddir = tp.rpad;
+	return pi;
+}
+
+#pragma warning( suppress : 4100 ) // 'tp': unreferenced formal parameter
+inline PadInfo SP(const TxtPrinter &tp, ui64 len, char pc, bool pdir)
+{
+	PadInfo pi;
+	pi.length = len;
+	pi.padc = pc;
+	pi.paddir = pdir;
+	return pi;
+}

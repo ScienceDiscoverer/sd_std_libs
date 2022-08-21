@@ -1,0 +1,684 @@
+#pragma once
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <txt>
+
+#ifdef DEBUG
+#pragma comment( lib, "stdpd" )
+#else
+#pragma comment( lib, "stdp" )
+#endif
+
+#define PL false
+#define PR true
+
+#define STD_PRINTER
+
+#ifndef TXT_PRINTER
+struct PadInfo
+{
+	ui64 length;
+	char padc;
+	bool paddir;
+	ui16 reserved_0;
+	ui32 reserved_1;
+};
+#endif
+
+class StdPrinter
+{
+public:
+	StdPrinter();
+	~StdPrinter() = default;
+	
+	StdPrinter(const StdPrinter &other) = delete;
+	StdPrinter(StdPrinter &&other) = delete;
+	StdPrinter operator=(const StdPrinter &other) = delete;
+	StdPrinter operator=(StdPrinter &&other) = delete;
+	
+	StdPrinter & operator|(ui64 ui);
+	StdPrinter & operator|(ui32 ui);
+	StdPrinter & operator|(ui16 ui);
+	StdPrinter & operator|(i64 i);
+	StdPrinter & operator|(i32 i);
+	StdPrinter & operator|(i16 i);
+	StdPrinter & operator|(wchar_t wc);
+	StdPrinter & operator|(char c);
+	StdPrinter & operator|(bool b);
+	/* TODO
+	StdPrinter &operator|(float f);
+	StdPrinter &operator|(double d);
+	StdPrinter &operator|(long double d);
+	*/
+	StdPrinter & operator|(const void *vp);
+	StdPrinter & operator|(const char *ccp);
+	StdPrinter & operator|(const wchar_t *cwcp);
+	
+	StdPrinter & operator|(const txt& t);
+	#ifdef WTXT_UTF16
+	StdPrinter & operator|(const wtxt& wt);
+	#endif
+	
+	StdPrinter & operator|(StdPrinter &(*func)(StdPrinter &stdp));
+	StdPrinter & operator|(StdPrinter &stdp);
+	StdPrinter & operator|(const PadInfo &pi);
+	
+	friend StdPrinter & H(StdPrinter &stdp);  // Next number as hex
+	friend StdPrinter & D(StdPrinter &stdp);  // Default color
+	friend StdPrinter & R(StdPrinter &stdp);  // Red
+	friend StdPrinter & G(StdPrinter &stdp);  // Green
+	friend StdPrinter & B(StdPrinter &stdp);  // Blue
+	friend StdPrinter & Y(StdPrinter &stdp);  // Yellow
+	friend StdPrinter & V(StdPrinter &stdp);  // Violet
+	friend StdPrinter & C(StdPrinter &stdp);  // Cayan
+	friend StdPrinter & RD(StdPrinter &stdp); // Dark Red
+	friend StdPrinter & GD(StdPrinter &stdp); // Dark Green
+	friend StdPrinter & BD(StdPrinter &stdp); // Dark Blue
+	friend StdPrinter & YD(StdPrinter &stdp); // Dark Yellow
+	friend StdPrinter & VD(StdPrinter &stdp); // Dark Violet
+	friend StdPrinter & CD(StdPrinter &stdp); // Dark Cayan
+	friend StdPrinter & DC(StdPrinter &stdp); // Disable Cursor
+	friend StdPrinter & EC(StdPrinter &stdp); // Enable Cursor
+	friend StdPrinter & S(StdPrinter &stdp);  // Print Space
+	friend StdPrinter & N(StdPrinter &stdp);  // Print Newline
+	friend StdPrinter & P(StdPrinter &stdp);  // Pause and wait for key press
+	friend StdPrinter & TB(StdPrinter &stdp); // Trimm console buffer
+	friend StdPrinter & MB(StdPrinter &stdp); // Set console buffer to max capacity
+	friend StdPrinter & PN(StdPrinter &stdp); // Pad next number with '/' ' hundreds/bytes
+	friend StdPrinter & DP(StdPrinter &stdp); // Disable all padding (sets default values)
+	
+	friend PadInfo SP(ui64 len);						// Set padding length
+	friend PadInfo SP(ui64 len, char pc);				// Set pad. length and fill
+	friend PadInfo SP(ui64 len, char pc, bool pdir);	// Set pad. length, fill and direction
+	
+	// Manips H - hex, R G B Y V C D - colz, DC EC - disable/enable cursore, S - space, N - newline
+	// P - pause and wait for key to be pressed, MB - set console buffer to max capacity
+	// PN - pad next number by thousands for dec/bytes for hex, SP - set padding, DP - disable padding
+private:
+	static DWORD Sl(const char *cs);
+	static DWORD Sl(const wchar_t *wcs);
+	static WORD GetDefConParams();
+	txt PadDec(const txt &dn);
+	txt PadHex(const txt &hn);
+	ui64 PrintPad(ui64 txtl);
+	
+private:
+	static HANDLE oh;					// Output Handle
+	static HANDLE ih;					// Input Handle
+	static DWORD bw;					// Bytes Written
+	static WORD defc;					// Default Color
+	static CONSOLE_CURSOR_INFO con;		// Cursor On
+	static CONSOLE_CURSOR_INFO coff;	// Cursor Off
+	static DWORD mod;					// Default Console Mode
+	ui64 padl;							// General padding length
+	char padc;							// Padding char
+	bool hex;							// Hex numbers mode
+	bool npad;							// Number padding style
+	bool rpad;							// Padding on the right side
+	ui32 reserved;
+};
+
+extern StdPrinter p;
+
+inline StdPrinter::StdPrinter()
+{
+	padc = ' ';
+}
+
+inline StdPrinter & StdPrinter::operator|(ui64 ui)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(ui32 ui)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui); //????
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(ui16 ui)
+{
+	//txt it = hex ? hex = false, i2h(ui) : i2t(ui);
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(i64 i)
+{
+	//txt it = hex ? hex = false, i2h((ui64)i) : i2t(i);
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(i32 i)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(i16 i)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(wchar_t wc)
+{
+	// TODO Improve to convert to unicode UTF-8 multibyte correctly
+	if(rpad)
+	{
+		WriteFile(oh, (char *)(&wc), 1, &bw, NULL);
+		PrintPad(1);
+	}
+	else
+	{
+		PrintPad(1);
+		WriteFile(oh, (char *)(&wc), 1, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(char c)
+{
+	if(rpad)
+	{
+		WriteFile(oh, &c, 1, &bw, NULL);
+		PrintPad(1);
+	}
+	else
+	{
+		PrintPad(1);
+		WriteFile(oh, &c, 1, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(bool b)
+{
+	DWORD s;
+	const char *bstr;
+	if(b)
+	{
+		s = 4;
+		bstr = "true";
+	}
+	else
+	{
+		s = 5;
+		bstr = "false";
+	}
+	
+	if(rpad)
+	{
+		WriteFile(oh, bstr, s, &bw, NULL);
+		PrintPad(s);
+	}
+	else
+	{
+		PrintPad(s);
+		WriteFile(oh, bstr, s, &bw, NULL);
+	}
+	return *this;
+}
+ /* TODO
+inline StdPrinter & StdPrinter::operator|(float f)
+{
+	
+}
+
+inline StdPrinter & StdPrinter::operator|(double d)
+{
+	
+}
+
+inline StdPrinter & StdPrinter::operator|(long double d)
+{
+	
+}
+*/
+inline StdPrinter & StdPrinter::operator|(const void *vp)
+{
+	txt it = i2h((ui64)vp);
+	txti(it, 0, "0x");
+	
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(const char *ccp)
+{	
+	DWORD ccpl = Sl(ccp);
+	if(rpad)
+	{
+		WriteFile(oh, ccp, ccpl, &bw, NULL);
+		PrintPad(ccpl);
+	}
+	else
+	{
+		PrintPad(ccpl);
+		WriteFile(oh, ccp, ccpl, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(const wchar_t *cwcp)
+{
+	// TODO Improve to convert to unicode UTF-8 multibyte correctly
+	//WriteFile(oh, cwcp, Sl(cwcp), &bw, NULL);
+	DWORD cwcpl = Sl(cwcp);
+	if(rpad)
+	{
+		WriteConsoleW(oh, cwcp, cwcpl, &bw, NULL);
+		PrintPad(cwcpl);
+	}
+	else
+	{
+		PrintPad(cwcpl);
+		WriteConsoleW(oh, cwcp, cwcpl, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(const txt& t)
+{
+	if(rpad)
+	{
+		WriteFile(oh, t, (DWORD)~t, &bw, NULL);
+		PrintPad(~t);
+	}
+	else
+	{
+		PrintPad(~t);
+		WriteFile(oh, t, (DWORD)~t, &bw, NULL);
+	}
+	return *this;
+}
+
+#ifdef WTXT_UTF16
+inline StdPrinter & StdPrinter::operator|(const wtxt& wt)
+{
+	// TODO Improve to convert to unicode UTF-8 multibyte correctly
+	//WriteFile(oh, wt, (DWORD)~wt, &bw, NULL);
+	if(rpad)
+	{
+		WriteConsoleW(oh, wt, (DWORD)~wt, &bw, NULL);
+		PrintPad(~wt);
+	}
+	else
+	{
+		PrintPad(~wt);
+		WriteConsoleW(oh, wt, (DWORD)~wt, &bw, NULL);
+	}
+	return *this;
+}
+#endif
+
+inline StdPrinter & StdPrinter::operator|(StdPrinter &(*func)(StdPrinter &stdp))
+{
+	return func(*this);
+}
+
+inline StdPrinter & StdPrinter::operator|(StdPrinter &stdp)
+{
+	return stdp;
+}
+
+inline StdPrinter & StdPrinter::operator|(const PadInfo &pi)
+{
+	padl = pi.length;
+	padc = pi.padc;
+	rpad = pi.paddir;
+	return *this;
+}
+
+inline DWORD StdPrinter::Sl(const char *cs)
+{
+	const char *sbeg = cs--;
+	while(*(++cs) != 0)
+	{
+		;
+	}
+	
+	return DWORD(cs - sbeg);
+}
+
+inline DWORD StdPrinter::Sl(const wchar_t *wcs)
+{
+	const wchar_t *sbeg = wcs--;
+	while(*(++wcs) != 0)
+	{
+		;
+	}
+	
+	return DWORD(wcs - sbeg);
+}
+
+inline WORD StdPrinter::GetDefConParams()
+{
+	HANDLE ohnd = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(ohnd, &csbi);
+	
+	GetConsoleCursorInfo(ohnd, &con);
+	con.bVisible = TRUE;
+	coff = con;
+	coff.bVisible = FALSE;
+	
+	HANDLE ihnd = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(ihnd, &mod);
+	
+	return csbi.wAttributes;
+}
+
+inline txt StdPrinter::PadDec(const txt &dn)
+{
+	char num[27]; // 18'446'744'073'709'551'616 MAX
+	num[26] = 0;
+	char *n = num + 26;
+	
+	ui32 d = 0;
+	for(i64 i = (i64)~dn-1; i >= 0; --i)
+	{
+		*(--n) = *((const char *)dn + i);
+		if(++d % 3 == 0)
+		{
+			*(--n) = '\'';
+		}
+	}
+	
+	if(*n == '\'')
+	{
+		++n;
+	}
+	
+	npad = false;
+	return txt(n);
+}
+
+inline txt StdPrinter::PadHex(const txt &hn)
+{
+	char num[25]; // 'FF'FF'FF'FF'FF'FF'FF'FF MAX
+	num[24] = 0;
+	char *n = num + 24;
+	
+	ui32 d = 0;
+	for(i64 i = (i64)~hn-1; i >= 0; --i)
+	{
+		*(--n) = *((const char *)hn + i);
+		if(++d % 2 == 0)
+		{
+			*(--n) = ' ';
+		}
+	}
+	
+	if(*n == ' ')
+	{
+		++n;
+	}
+	
+	npad = false;
+	return txt(n);
+}
+
+inline ui64 StdPrinter::PrintPad(ui64 txtl)
+{
+	if(txtl >= padl)
+	{
+		return 0;
+	}
+	
+	txtl = padl - txtl;
+	txt pad = txtl;
+	memset(pad, padc, txtl);
+	WriteFile(oh, pad, (DWORD)txtl, &bw, NULL);
+	
+	return txtl;
+}
+
+inline StdPrinter & H(StdPrinter &stdp)
+{
+	stdp.hex = true;
+	return stdp;
+}
+
+inline StdPrinter & D(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, StdPrinter::defc);
+	return stdp;
+}
+
+inline StdPrinter & R(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0xC);
+	return stdp;
+}
+
+inline StdPrinter & G(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0xA);
+	return stdp;
+}
+
+inline StdPrinter & B(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x9);
+	return stdp;
+}
+
+inline StdPrinter & Y(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0xE);
+	return stdp;
+}
+
+inline StdPrinter & V(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0xD);
+	return stdp;
+}
+
+inline StdPrinter & C(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0xB);
+	return stdp;
+}
+
+inline StdPrinter & RD(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x4);
+	return stdp;
+}
+
+inline StdPrinter & GD(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x2);
+	return stdp;
+}
+
+inline StdPrinter & BD(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x1);
+	return stdp;
+}
+
+inline StdPrinter & YD(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x6);
+	return stdp;
+}
+
+inline StdPrinter & VD(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x5);
+	return stdp;
+}
+
+inline StdPrinter & CD(StdPrinter &stdp)
+{
+	SetConsoleTextAttribute(stdp.oh, 0x3);
+	return stdp;
+}
+
+inline StdPrinter & DC(StdPrinter &stdp)
+{
+	SetConsoleCursorInfo(stdp.oh, &stdp.coff);
+	return stdp;
+}
+
+inline StdPrinter & EC(StdPrinter &stdp)
+{
+	SetConsoleCursorInfo(stdp.oh, &stdp.con);
+	return stdp;
+}
+
+inline StdPrinter & S(StdPrinter &stdp)
+{
+	WriteFile(stdp.oh, " ", 1, &stdp.bw, NULL);
+	return stdp;
+}
+
+inline StdPrinter & N(StdPrinter &stdp)
+{
+	WriteFile(stdp.oh, "\n", 1, &stdp.bw, NULL);
+	return stdp;
+}
+
+inline StdPrinter & P(StdPrinter &stdp)
+{
+    stdp|DC;
+	SetConsoleMode(stdp.ih, stdp.mod & 0xFFFFFFF9); // ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT)
+    static char c;
+    ReadFile(stdp.ih, &c, 1, &stdp.bw, NULL);
+    SetConsoleMode(stdp.ih, stdp.mod);
+	return stdp|EC;
+}
+
+StdPrinter & TB(StdPrinter &stdp);
+
+inline StdPrinter & MB(StdPrinter &stdp)
+{
+	static CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(stdp.oh, &csbi);
+	static COORD buff_sz = csbi.dwSize;
+	buff_sz.Y = 9999;
+	
+	// Window size must be always at least 1 cell less than buffer size
+	// Reason: probably because srWindow is coordinates, swSize is actual number of cells
+	SetConsoleScreenBufferSize(stdp.oh, buff_sz);
+	
+	return stdp;
+}
+
+inline StdPrinter & PN(StdPrinter &stdp)
+{
+	stdp.npad = true;
+	return stdp;
+}
+
+inline StdPrinter & DP(StdPrinter &stdp)
+{
+	stdp.padl = 0;
+	stdp.padc = ' ';
+	stdp.rpad = false;
+	return stdp;
+}
+
+#ifndef TXT_PRINTER
+inline PadInfo SP(ui64 len)
+{
+	PadInfo pi;
+	pi.length = len;
+	pi.padc = p.padc;
+	pi.paddir = p.rpad;
+	return pi;
+}
+
+inline PadInfo SP(ui64 len, char pc)
+{
+	PadInfo pi;
+	pi.length = len;
+	pi.padc = pc;
+	pi.paddir = p.rpad;
+	return pi;
+}
+
+inline PadInfo SP(ui64 len, char pc, bool pdir)
+{
+	PadInfo pi;
+	pi.length = len;
+	pi.padc = pc;
+	pi.paddir = pdir;
+	return pi;
+}
+#endif
