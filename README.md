@@ -1,2 +1,2 @@
-# sd_std_libs
+# ScienceDiscoverer's STD Libriaries
 My own, improved standart libriaries
