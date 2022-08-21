@@ -11,3 +11,6 @@ Not yet implemented:
 * Convertion between UTF16 and UTF8 texts using UNICODE.
 * Convertion to/from text types from/to floating point numbers.
 * Printing floating point numbers
+
+Performance comparation with standart C++ libriaries (`wtxttst.cpp`):
+<img src="readme/showdown.png">
