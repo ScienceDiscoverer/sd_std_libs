@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <txt>
 
+// TODO PADDING WITH NEGATIVE NUMBERS -> IGNORE IF MINUS IN PLACE, BUT PAD BEFORE NUMBER IF PADDING BIGGER
+
 #ifdef DEBUG
 #pragma comment( lib, "stdpd" )
 #else
@@ -30,7 +32,7 @@ class StdPrinter
 {
 public:
 	StdPrinter();
-	~StdPrinter() = default;
+	~StdPrinter();
 	
 	StdPrinter(const StdPrinter &other) = delete;
 	StdPrinter(StdPrinter &&other) = delete;
@@ -111,6 +113,8 @@ private:
 	static CONSOLE_CURSOR_INFO con;		// Cursor On
 	static CONSOLE_CURSOR_INFO coff;	// Cursor Off
 	static DWORD mod;					// Default Console Mode
+	ui32 defocp;						// Default output code page
+	ui32 deficp;						// Default input code page
 	ui64 padl;							// General padding length
 	char padc;							// Padding char
 	bool hex;							// Hex numbers mode
@@ -124,6 +128,16 @@ extern StdPrinter p;
 inline StdPrinter::StdPrinter()
 {
 	padc = ' ';
+	defocp = GetConsoleOutputCP();
+	deficp = GetConsoleCP();
+	SetConsoleOutputCP(65001); // Unicode UTF-8
+	SetConsoleCP(65001);
+}
+
+inline StdPrinter::~StdPrinter()
+{
+	SetConsoleOutputCP(defocp);
+	SetConsoleCP(deficp);
 }
 
 inline StdPrinter & StdPrinter::operator|(ui64 ui)
