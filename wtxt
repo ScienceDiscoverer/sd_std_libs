@@ -36,6 +36,7 @@ typedef signed long int li32;
 #define NFND 0xFFFFFFFFFFFFFFFF // Text was not found
 #define RALL 0xFFFFFFFFFFFFFFFF // Replace everything from pos to end of text
 #define DALL 0xFFFFFFFFFFFFFFFF // Delete everything from pos to end of text
+#define TEND 0xFFFFFFFFFFFFFFFF // Text MAX end position
 #define TXT_CONCAT_MULT 2
 
 #define EXCEPTION_TXTI_BUFF_OVERRUN 0xE0000001
@@ -126,6 +127,8 @@ public:
 	friend wtxt & txtr(wtxt &t, ui64 pos, ui64 n, const wchar_t *rep);
 	friend wtxt & txtr(wtxt &t, ui64 pos, ui64 n, wchar_t rep);
 	friend wtxt & txtd(wtxt &t, ui64 pos, ui64 n);
+	friend wtxt txts(const wtxt &t, ui64 pos, ui64 n);
+	friend wtxt txtsp(const wtxt &t, ui64 p0, ui64 p1);
 	
 private:
 	static ui64 Sl(const wchar_t *cs);
@@ -356,7 +359,7 @@ inline ui64 wtxt::Sl(const wchar_t *cs)
 
 inline void wtxt::Alloc(ui64 sz)
 {
-	if(++sz > 0x200)
+	if(++sz > 0x200) // ++ to account for \0 char!
 	{
 		ts = sz; // VirtualAlloc will zero memory by default
 		t = (wchar_t *)VirtualAlloc(NULL, ts * sizeof(wchar_t), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -371,7 +374,7 @@ inline void wtxt::Alloc(ui64 sz)
 
 inline wchar_t * wtxt::AllocTmp(ui64 sz, ui64 *nts)
 {
-	if(++sz > 0x200)
+	if(++sz > 0x200) // ++ to account for \0 char!
 	{
 		*nts = sz;
 		return (wchar_t *)VirtualAlloc(NULL, *nts * sizeof(wchar_t), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);

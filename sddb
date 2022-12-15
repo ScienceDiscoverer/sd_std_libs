@@ -20,7 +20,7 @@
 #define TOSTR(x) STR(x)
 #define bp std::wcout << "BP-" << TOSTR(__LINE__) << std::endl; fkcursor(); _getch(); okcursor();
 #define dp(x) std::wcout << std::setw(32) << #x << "|" << (x) << "|" << std::endl;
-#define dph(x) std::wcout << std::setw(32) << std::hex << std::uppercase << #x << "|" << (x) << "|" << std::dec << nouppercase << std::endl;
+#define dph(x) std::wcout << std::setw(32) << std::hex << std::uppercase << #x << "|" << (x) << "|" << std::dec << std::nouppercase << std::endl;
 #else
 #define bp
 #define dp(x)
@@ -70,6 +70,7 @@ inline void okcursor()
 #define EXCEPTION_H2I_NON_NUMBER    0xE0000004
 #define EXCEPTION_T2I_OVERFLOW      0xE0000005
 #define EXCEPTION_H2I_OVERFLOW      0xE0000006
+#define EXCEPTION_DARR_OUT_OF_RANGE 0xE0000011
 
 #define EXCEPT_TXT_UTF8  0
 #define EXCEPT_TXT_UTF16 1

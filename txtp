@@ -39,9 +39,11 @@ public:
 	
 	TxtPrinter & operator|(ui64 ui);
 	TxtPrinter & operator|(ui32 ui);
+	TxtPrinter & operator|(uli32 ui);
 	TxtPrinter & operator|(ui16 ui);
 	TxtPrinter & operator|(i64 i);
 	TxtPrinter & operator|(i32 i);
+	TxtPrinter & operator|(li32 i);
 	TxtPrinter & operator|(i16 i);
 	TxtPrinter & operator|(wchar_t wc);
 	TxtPrinter & operator|(char c);
@@ -134,6 +136,22 @@ inline TxtPrinter & TxtPrinter::operator|(ui32 ui)
 	return *this;
 }
 
+inline TxtPrinter & TxtPrinter::operator|(uli32 uli)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h(uli)) : i2h(uli) : npad ? PadDec(i2t(uli)) : i2t(uli);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
 inline TxtPrinter & TxtPrinter::operator|(ui16 ui)
 {
 	//txt it = hex ? hex = false, i2h(ui) : i2t(ui);
@@ -184,6 +202,22 @@ inline TxtPrinter & TxtPrinter::operator|(i32 i)
 	return *this;
 }
 
+inline TxtPrinter & TxtPrinter::operator|(li32 li)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)li)) : i2h((ui64)li) : npad ? PadDec(i2t(li)) : i2t(li);
+	if(rpad)
+	{
+		text += it;
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		text += it;
+	}
+	return *this;
+}
+
 inline TxtPrinter & TxtPrinter::operator|(i16 i)
 {
 	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
@@ -202,7 +236,6 @@ inline TxtPrinter & TxtPrinter::operator|(i16 i)
 
 inline TxtPrinter & TxtPrinter::operator|(wchar_t wc)
 {
-	// TODO Improve to convert to unicode UTF-8 multibyte correctly
 	if(rpad)
 	{
 		text += (char)wc;

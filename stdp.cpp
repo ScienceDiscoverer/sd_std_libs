@@ -64,7 +64,7 @@ StdPrinter & TB(StdPrinter &stdp)
 	
 	//p|"last_row "|last_row|N;
 	
-	buff_sz.Y = (SHORT)last_row + 2;
+	buff_sz.Y = (SHORT)last_row + 6;
 	if(buff_sz.Y < csbi.srWindow.Bottom - csbi.srWindow.Top)
 	{
 		buff_sz.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;

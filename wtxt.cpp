@@ -18,7 +18,6 @@ wtxt & wtxt::operator+=(const wtxt &o)
 	
 	memcpy(t+s, o.t, o.s * sizeof(wchar_t));
 	s = ns;
-	t[s] = 0;
 	
 	return *this;
 }
@@ -37,7 +36,6 @@ wtxt & wtxt::operator+=(const wchar_t *cs)
 	}
 	memcpy(t+s, cs, ss * sizeof(wchar_t));
 	s = ns;
-	t[s] = 0;
 	
 	return *this;
 }
@@ -57,7 +55,6 @@ wtxt & wtxt::operator+=(wchar_t c) // Very effective for rapid chars appending
 
 	t[s] = c;
 	s = ns;
-	t[s] = 0;
 	
 	return *this;
 }
@@ -104,6 +101,11 @@ void wtxt::ExceptNum(DWORD c) const
 
 ui64 operator>>(const wtxt &fnd, const wtxt &t)
 {
+	if(fnd.s > t.s)
+	{
+		return NFND;
+	}
+	
 	const wchar_t *fb = fnd.t-1, *fe = fnd.t + fnd.s;
 	const wchar_t *tb = t.t-1, *te = t.t + t.s - fnd.s;
 	const wchar_t *tb_cur = NULL;
@@ -133,6 +135,11 @@ ui64 operator>>(const wtxt &fnd, const wtxt &t)
 ui64 operator>>(const wchar_t *fnd, const wtxt &t) // x2.22 FASTER VS STD Finding Test
 {
 	ui64 fnds = wtxt::Sl(fnd);
+	
+	if(fnds > t.s)
+	{
+		return NFND;
+	}
 
 	const wchar_t *fb = fnd-1, *fe = fnd + fnds;
 	const wchar_t *tb = t.t-1, *te = t.t + t.s - fnds;
@@ -177,6 +184,11 @@ ui64 operator>>(wchar_t fnd, const wtxt &t)
 
 ui64 operator<<(const wtxt &fnd, const wtxt &t)
 {
+	if(fnd.s > t.s)
+	{
+		return NFND;
+	}
+	
 	const wchar_t *fb = fnd.t-1, *fe = fnd.t + fnd.s;
 	const wchar_t *tb = t.t-1, *te = t.t + t.s - fnd.s;
 	const wchar_t *tb_cur = NULL;
@@ -205,6 +217,12 @@ ui64 operator<<(const wtxt &fnd, const wtxt &t)
 ui64 operator<<(const wchar_t *fnd, const wtxt &t)
 {
 	ui64 fnds = wtxt::Sl(fnd);
+	
+	if(fnds > t.s)
+	{
+		return NFND;
+	}
+	
 	const wchar_t *fb = fnd-1, *fe = fnd + fnds;
 	const wchar_t *tb = t.t-1, *te = t.t + t.s - fnds;
 	const wchar_t *tb_cur = NULL;
@@ -247,6 +265,11 @@ ui64 operator<<(wchar_t fnd, const wtxt &t)
 
 ui64 txtf(const wtxt &t, ui64 pos, const wtxt &fnd)
 {
+	if(fnd.s > t.s)
+	{
+		return NFND;
+	}
+	
 	if(pos > t.s - fnd.s)
 	{
 		return NFND;
@@ -281,6 +304,11 @@ ui64 txtf(const wtxt &t, ui64 pos, const wtxt &fnd)
 ui64 txtf(const wtxt &t, ui64 pos, const wchar_t *fnd)
 {
 	ui64 fnds = wtxt::Sl(fnd);
+	
+	if(fnds > t.s)
+	{
+		return NFND;
+	}
 	
 	if(pos > t.s - fnds)
 	{
@@ -335,6 +363,11 @@ ui64 txtf(const wtxt &t, ui64 pos, wchar_t fnd)
 
 ui64 txtfe(const wtxt &t, ui64 pos, const wtxt &fnd)
 {
+	if(fnd.s > t.s)
+	{
+		return NFND;
+	}
+	
 	if(pos > t.s)
 	{
 		return NFND;
@@ -377,6 +410,11 @@ ui64 txtfe(const wtxt &t, ui64 pos, const wtxt &fnd)
 ui64 txtfe(const wtxt &t, ui64 pos, const wchar_t *fnd)
 {
 	ui64 fnds = wtxt::Sl(fnd);
+	
+	if(fnds > t.s)
+	{
+		return NFND;
+	}
 	
 	if(pos > t.s)
 	{
@@ -735,6 +773,47 @@ wtxt & txtd(wtxt &t, ui64 pos, ui64 n)
 	return t;
 }
 
+wtxt txts(const wtxt &t, ui64 pos, ui64 n)
+{
+	if(pos > t.s)
+	{
+		t.ExceptBuff(EXCEPTION_TXTI_BUFF_OVERRUN, pos);
+		return wtxt();
+	}
+	
+	if(n > t.s || pos + n > t.s)
+	{
+		n = t.s - pos;
+	}
+	
+	wtxt res = n;
+	memcpy(res.t, t.t + pos, n * sizeof(wchar_t));
+	res.s = n;
+	
+	return res;
+}
+
+wtxt txtsp(const wtxt &t, ui64 p0, ui64 p1)
+{
+	if(p0 > t.s)
+	{
+		t.ExceptBuff(EXCEPTION_TXTI_BUFF_OVERRUN, p0);
+		return wtxt();
+	}
+	
+	if(p1 > t.s)
+	{
+		p1 = t.s-1;
+	}
+	
+	ui64 n = p1 - p0 + 1;
+	wtxt res = n;
+	memcpy(res.t, t.t + p0, n * sizeof(wchar_t));
+	res.s = n;
+	
+	return res;
+}
+
 wtxt i2wt(ui64 i)
 {
 	wchar_t b[21]; // Max number 18446744073709551616
@@ -933,7 +1012,7 @@ wtxt i2wh(ui8 i)
 	return wtxt((wchar_t *)b);
 }
 
-ui64 t2i(const wtxt &t)
+ui64 t2i(const wtxt &t) // Check out ql.cpp for most minimal and fastest implementation of this
 {
 	ui64 negative = 0;
 	

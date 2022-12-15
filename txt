@@ -34,6 +34,7 @@ typedef signed long int li32;
 #define NFND 0xFFFFFFFFFFFFFFFF // Text was not found
 #define RALL 0xFFFFFFFFFFFFFFFF // Replace everything from pos to end of text
 #define DALL 0xFFFFFFFFFFFFFFFF // Delete everything from pos to end of text
+#define TEND 0xFFFFFFFFFFFFFFFF // Text MAX end position
 #define TXT_CONCAT_MULT 2
 
 #define EXCEPTION_TXTI_BUFF_OVERRUN 0xE0000001
@@ -133,7 +134,9 @@ public:
 	friend txt & txtr(txt &t, ui64 pos, ui64 n, const char *rep);
 	friend txt & txtr(txt &t, ui64 pos, ui64 n, char rep);
 	friend txt & txtd(txt &t, ui64 pos, ui64 n);
-	
+	friend txt txts(const txt &t, ui64 pos, ui64 n);
+	friend txt txtsp(const txt &t, ui64 p0, ui64 p1);
+
 private:
 	static ui64 Sl(const char *cs);
 	static char * AllocTmp(ui64 s, ui64 *nts);
@@ -347,7 +350,7 @@ inline ui64 txt::Sl(const char *cs)
 
 inline void txt::Alloc(ui64 sz)
 {
-	if(++sz > 0x400)
+	if(++sz > 0x400) // ++ to account for \0 char!
 	{
 		ts = sz; // VirtualAlloc will zero memory by default
 		t = (char *)VirtualAlloc(NULL, ts, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -362,7 +365,7 @@ inline void txt::Alloc(ui64 sz)
 
 inline char * txt::AllocTmp(ui64 sz, ui64 *nts)
 {
-	if(++sz > 0x400)
+	if(++sz > 0x400) // ++ to account for \0 char!
 	{
 		*nts = sz;
 		return (char *)VirtualAlloc(NULL, *nts, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);

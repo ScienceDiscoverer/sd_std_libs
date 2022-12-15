@@ -2,7 +2,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <txt>
+#include <utf>
 
 // TODO PADDING WITH NEGATIVE NUMBERS -> IGNORE IF MINUS IN PLACE, BUT PAD BEFORE NUMBER IF PADDING BIGGER
 
@@ -41,9 +41,11 @@ public:
 	
 	StdPrinter & operator|(ui64 ui);
 	StdPrinter & operator|(ui32 ui);
+	StdPrinter & operator|(uli32 ui);
 	StdPrinter & operator|(ui16 ui);
 	StdPrinter & operator|(i64 i);
 	StdPrinter & operator|(i32 i);
+	StdPrinter & operator|(li32 i);
 	StdPrinter & operator|(i16 i);
 	StdPrinter & operator|(wchar_t wc);
 	StdPrinter & operator|(char c);
@@ -158,7 +160,23 @@ inline StdPrinter & StdPrinter::operator|(ui64 ui)
 
 inline StdPrinter & StdPrinter::operator|(ui32 ui)
 {
-	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui); //????
+	txt it = hex ? hex = false, npad ? PadHex(i2h(ui)) : i2h(ui) : npad ? PadDec(i2t(ui)) : i2t(ui);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
+inline StdPrinter & StdPrinter::operator|(uli32 uli)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h(uli)) : i2h(uli) : npad ? PadDec(i2t(uli)) : i2t(uli);
 	if(rpad)
 	{
 		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
@@ -222,6 +240,22 @@ inline StdPrinter & StdPrinter::operator|(i32 i)
 	return *this;
 }
 
+inline StdPrinter & StdPrinter::operator|(li32 li)
+{
+	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)li)) : i2h((ui64)li) : npad ? PadDec(i2t(li)) : i2t(li);
+	if(rpad)
+	{
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+		PrintPad(~it);
+	}
+	else
+	{
+		PrintPad(~it);
+		WriteFile(oh, it, (DWORD)~it, &bw, NULL);
+	}
+	return *this;
+}
+
 inline StdPrinter & StdPrinter::operator|(i16 i)
 {
 	txt it = hex ? hex = false, npad ? PadHex(i2h((ui64)i)) : i2h((ui64)i) : npad ? PadDec(i2t(i)) : i2t(i);
@@ -240,16 +274,19 @@ inline StdPrinter & StdPrinter::operator|(i16 i)
 
 inline StdPrinter & StdPrinter::operator|(wchar_t wc)
 {
-	// TODO Improve to convert to unicode UTF-8 multibyte correctly
+	wtxt tmp = wc;
+	txt t8 = wt2u8(tmp);
+	ui64 ts = u8ts(t8);
+	
 	if(rpad)
 	{
-		WriteFile(oh, (char *)(&wc), 1, &bw, NULL);
-		PrintPad(1);
+		WriteFile(oh, t8, (DWORD)~t8, &bw, NULL);
+		PrintPad(ts);
 	}
 	else
 	{
-		PrintPad(1);
-		WriteFile(oh, (char *)(&wc), 1, &bw, NULL);
+		PrintPad(ts);
+		WriteFile(oh, t8, (DWORD)~t8, &bw, NULL);
 	}
 	return *this;
 }
@@ -348,18 +385,19 @@ inline StdPrinter & StdPrinter::operator|(const char *ccp)
 
 inline StdPrinter & StdPrinter::operator|(const wchar_t *cwcp)
 {
-	// TODO Improve to convert to unicode UTF-8 multibyte correctly
-	//WriteFile(oh, cwcp, Sl(cwcp), &bw, NULL);
-	DWORD cwcpl = Sl(cwcp);
+	wtxt tmp = cwcp;
+	txt t8 = wt2u8(tmp);
+	ui64 ts = u8ts(t8);
+	
 	if(rpad)
 	{
-		WriteConsoleW(oh, cwcp, cwcpl, &bw, NULL);
-		PrintPad(cwcpl);
+		WriteFile(oh, t8, (DWORD)~t8, &bw, NULL);
+		PrintPad(ts);
 	}
 	else
 	{
-		PrintPad(cwcpl);
-		WriteConsoleW(oh, cwcp, cwcpl, &bw, NULL);
+		PrintPad(ts);
+		WriteFile(oh, t8, (DWORD)~t8, &bw, NULL);
 	}
 	return *this;
 }
@@ -382,17 +420,18 @@ inline StdPrinter & StdPrinter::operator|(const txt& t)
 #ifdef WTXT_UTF16
 inline StdPrinter & StdPrinter::operator|(const wtxt& wt)
 {
-	// TODO Improve to convert to unicode UTF-8 multibyte correctly
-	//WriteFile(oh, wt, (DWORD)~wt, &bw, NULL);
+	txt t8 = wt2u8(wt);
+	ui64 ts = u8ts(t8);
+	
 	if(rpad)
 	{
-		WriteConsoleW(oh, wt, (DWORD)~wt, &bw, NULL);
-		PrintPad(~wt);
+		WriteFile(oh, t8, (DWORD)~t8, &bw, NULL);
+		PrintPad(ts);
 	}
 	else
 	{
-		PrintPad(~wt);
-		WriteConsoleW(oh, wt, (DWORD)~wt, &bw, NULL);
+		PrintPad(ts);
+		WriteFile(oh, t8, (DWORD)~t8, &bw, NULL);
 	}
 	return *this;
 }
