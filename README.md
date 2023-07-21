@@ -14,3 +14,5 @@ Not yet implemented:
 
 Performance comparation with standart C++ libriaries (`wtxttst.cpp`):
 <img src="readme/showdown.png">
+
+TODO PUT PEFORMANCE OF TXT HERE TOO!
