@@ -1,0 +1,8 @@
+*.exe
+*.lib
+*.obj
+*.pdb
+*.cod
+
+# Test Files Directory
+tstf/

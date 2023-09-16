@@ -1,0 +1,117 @@
+#pragma once
+
+#include <utf>
+
+#ifdef DEBUG
+	#pragma comment( lib, "utfcased" )
+#else
+	#pragma comment( lib, "utfcase" )
+#endif
+
+wchar_t utfCharToLow(wchar_t c);	// 1.38 times slower than c2low
+wchar_t utfCharToUp(wchar_t c);		// 1.38 times slower than c2up
+
+inline ui64 utfTxtFindCaseIns(const wtxt &t, ui64 pos, const wtxt &fnd)
+{
+	if(~fnd > ~t || pos > ~t - ~fnd)
+	{
+		return NFND;
+	}
+	
+	const wchar_t *fb = (const wchar_t *)fnd, *fl = (const wchar_t *)fnd + ~fnd - 1;
+	const wchar_t *tb = (const wchar_t *)t + pos, *te = (const wchar_t *)t + ~t - ~fnd + 1;
+	
+	while(tb != te)
+	{
+		const wchar_t *tc = tb;
+		while(*fb == utfCharToLow(*tc))
+		{
+			if(fb == fl)
+			{
+				return (ui64)(tb - (const wchar_t *)t);
+			}
+			
+			++fb, ++tc;
+		}
+		
+		fb = (const wchar_t *)fnd, ++tb;
+	}
+	
+	return NFND;
+}
+
+inline wtxt & utfTxtToLow(wtxt &t) // Convert entire text to lowercase characters
+{
+	for(ui64 i = 0; i < ~t; ++i)
+	{
+		t[i] = utfCharToLow(t[i]);
+	}
+	return t;
+}
+
+inline wtxt & utfTxtToUp(wtxt &t) // Convert entire text to uppercase characters
+{
+	for(ui64 i = 0; i < ~t; ++i)
+	{
+		t[i] = utfCharToUp(t[i]);
+	}
+	return t;
+}
+
+//inline txt & t2low(txt &t) // Convert entire text to lowercase characters
+//{
+//	for(ui64 i = 0; i < ~t; ++i)
+//	{
+//		ui8 ored = t[i] | 0x20U;
+//		ored -= 0x61U;		// [a] If [ored] is less than [a], it will overflow into big value
+//		if(ored > 0x19U)	// [z - a] = 0x19, if [ored] is more -> it either was < [a] or > [z]
+//		{
+//			continue;
+//		}
+//		t[i] |= 0x20U;
+//	}
+//	return t;
+//}
+//
+//inline txt & t2lowfst(txt &t) // Fast version. Input must not contain @[\]^_ and 0x0-0x1F
+//{
+//	mor(t, 0x2020202020202020, ~t);
+//	return t;
+//}
+//
+//inline txt & t2up(txt &t) // Convert entire text to uppercase characters
+//{
+//	for(ui64 i = 0; i < ~t; ++i)
+//	{
+//		ui8 tmp = t[i];
+//		tmp -= 0x61U;	// a
+//		if(tmp > 0x19U)	// z - a
+//		{
+//			continue;
+//		}
+//		t[i] ^= 0x20U; // Flip the case bit
+//	}
+//	return t;
+//}
+//
+//inline char c2low(char c)
+//{
+//	ui8 ored = c | 0x20U;
+//	ored -= 0x61U;
+//	if(ored > 0x19U)
+//	{
+//		return c;
+//	}
+//	return c | 0x20U;
+//}
+//
+//inline char c2up(char c)
+//{
+//	ui8 tmp = c;
+//	tmp -= 0x61U;
+//	if(tmp > 0x19U)
+//	{
+//		return c;
+//	}
+//	return c ^ 0x20U;
+//}

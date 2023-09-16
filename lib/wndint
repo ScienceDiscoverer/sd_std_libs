@@ -1,0 +1,129 @@
+#pragma once
+
+#include "types.h"
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#pragma comment(lib, "user32")
+#pragma comment(lib, "gdi32")
+
+#ifdef DEBUG
+	#pragma comment( lib, "wndintd" )
+#else
+	#pragma comment( lib, "wndint" )
+#endif
+
+#define HW(x) (((unsigned int)x) >> 16)
+#define LW(x) (((unsigned int)x) & 0xFFFF)
+#define HWSIGN(x) ((int)(short)HW(x))
+#define LWSIGN(x) ((int)(short)LW(x))
+#define DPIS(x) ((ui64)((double)x * dpi_scale)) // Scale value for DPI
+
+// Window styles
+
+#define W_DEFAULT		0x0		// Window style is irrelevant
+
+#define W_BARE			0x1		// Popup window with no non-client area
+#define W_MIN_TITLE		0x2		// Window with minimal title bar (only X button)
+#define W_FULL_TITLE	0x4		// Window with full title bar and set of 3 buttons
+
+#define W_SCROLL		0x8		// Enable scroll bars for the window
+#define W_HIDE_TBAR		0x10	// Hide window's taskbar button
+
+// Window positions
+
+#define W_LEFT			0x1
+#define W_RIGHT			0x2
+#define W_BOTTOM		0x4
+#define W_TOP			0x8
+#define W_CENTER		0x10
+
+extern HINSTANCE exec_adress;
+extern ATOM main_class;
+extern HWND main_wnd;
+
+extern HFONT default_font;
+extern HBRUSH backgrnd;
+extern HDC main_dc;
+
+extern ui64 cellw, cellh;						// Size of the character cell in pixels
+extern ui64 clw, clh;							// Client width/height
+extern ui64 y_scrl, x_scrl;						// Current value of scroll bars
+extern UINT mwheel_scroll_ln, mwheel_scroll_ch; // System values for mouse wheel scrolling
+
+extern double dpi_scale;
+
+extern ui64 clmx, clmy;							// Client mouse position at the moment of last LMB down
+extern ui64 snap_pix;							// How close to the screen edge before snapping
+extern bool64 snapping;
+
+extern RECT work_pix;							// Working pixels
+
+extern bool64 topmost;							// Saves current main window's topmost status
+
+// Core interface
+
+ATOM initGui(WNDPROC wnd_proc);
+HWND spawnMainWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y);
+HWND spawnMainWnd(ui64 style, const wchar_t* title, i32 w, i32 h, ui64 pos);
+
+inline void enterMsgLoop()
+{
+	MSG msg;
+	while(GetMessage(&msg, NULL, 0, 0) > 0 )
+	{
+		DispatchMessage(&msg);
+	}
+}
+
+inline void enterTranslateMsgLoop()
+{
+	MSG msg;
+	while(GetMessage(&msg, NULL, 0, 0) > 0 )
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
+// Mouse Functionality
+
+inline LRESULT wmLbDownClientDrag()
+{
+	PostMessage(main_wnd, WM_SYSCOMMAND, 0xF009, 0); // 0xF009 -> SC_DRAG (undocumented)
+	return 0;
+}
+
+inline LRESULT wmEnterSzMoveSnap()
+{
+	static RECT rec;
+	GetWindowRect(main_wnd, &rec);
+	
+	i64 wx = rec.left, wy = rec.top, wxr = rec.right, wyb = rec.bottom;
+	i64 sx = work_pix.left, sy = work_pix.top, sxr = work_pix.right, syb = work_pix.bottom;
+	i64 sp = (i64)snap_pix;
+	
+	snapping = !((wx - sx < sp) || (wy - sy < sp) || (sxr - wxr < sp) || (syb - wyb < sp));
+	return 0;
+}
+
+LRESULT wmMovingSnap(LPARAM lp);
+
+// Utility
+
+inline LRESULT toggleTopmost()
+{
+	if(topmost)
+	{
+		SetWindowPos(main_wnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+		topmost = false;
+	}
+	else
+	{
+		SetWindowPos(main_wnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+		topmost = true;
+	}
+	
+	return 0;
+}

@@ -1,0 +1,270 @@
+#pragma once
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <binf>
+
+#include "padinf.h"
+#include "fileinf.h"
+
+struct FileRdLim
+{
+	ui64 lim;
+};
+
+class FileReader
+{
+public:
+	FileReader();
+	FileReader(const char *fn);
+	FileReader(const wchar_t *fn);
+	FileReader(const txt &fn);
+	FileReader(const wtxt &fn);
+	~FileReader();
+	
+	FileReader(const FileReader &other) = delete;
+	FileReader(FileReader &&other) = delete;
+	FileReader operator=(const FileReader &other) = delete;
+	FileReader operator=(FileReader &&other) = delete;
+	
+	operator bool64();
+	
+	FileReader & operator>(txt &t);
+	FileReader & operator>(wtxt &wt);
+	FileReader & operator>(binf &bf);
+	
+	FileReader & operator>(FileReader &(*func)(FileReader &fr));
+	FileReader & operator>(FileReader &fr);
+	FileReader & operator>(FileRdLim frl);
+	
+	FileReader & operator<(FileInfoA fi);
+	FileReader & operator<(FileInfoW fi);
+	
+	friend FileReader & FC(FileReader &fr); // Close the file and invalidate handle
+	
+	friend FileRdLim FRL(ui64 maxb);		// Only read up to [maxb] b. from current file [0] -> no limit
+	
+	friend FileInfoA FO(const char *fn);	// Open new file, already opened file will be closed
+	friend FileInfoW FO(const wchar_t *fn);
+	friend FileInfoA FO(const txt &fn);
+	friend FileInfoW FO(const wtxt &fn);
+	
+private:
+	ui64 GetFileSz();
+
+private:
+	HANDLE ih;		// Input Handle
+	ui64 rd_lim;	// Read limit (in bytes)
+};
+
+typedef FileReader filer;
+
+inline FileReader::FileReader()
+{
+	rd_lim = 0;
+	ih = INVALID_HANDLE_VALUE;
+}
+
+inline FileReader::FileReader(const char *fn)
+{
+	rd_lim = 0;
+	// Create or open File or Device =================================================================
+	ih = CreateFileA(
+		fn,							//   [I]  Name of the file or device to create/open
+		GENERIC_READ,				//   [I]  Requested access GENERIC_READ|GENERIC_WRITE|0
+		FILE_SHARE_READ,			//   [I]  Sharing mode FILE_SHARE_READ|WRITE|DELETE|0
+		NULL,						// [I|O]  SECURITY_ATTRIBUTES for file, handle inheritability
+		OPEN_EXISTING,				//   [I]  Action to take if file/device exist or not
+		FILE_FLAG_SEQUENTIAL_SCAN,	//   [I]  Attributes and flags for file/device
+		NULL);						// [I|O]  Handle to template file to copy attributes from
+	// ===============================================================================================
+}
+
+inline FileReader::FileReader(const wchar_t *fn)
+{
+	rd_lim = 0;
+	ih = CreateFileW(
+		fn,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_SEQUENTIAL_SCAN,
+		NULL);
+	
+	//DWORD br;
+	//while(ReadFile(f1, fread_buff, FILE_READ_CHUNK, &br, NULL) && br)
+	//{
+	//	bf1.add(fread_buff, br);
+	//}
+	//
+	//CloseHandle(f1); // Always check the handle!
+}
+
+inline FileReader::FileReader(const txt &fn)
+{
+	rd_lim = 0;
+	ih = CreateFileA(
+		fn,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_SEQUENTIAL_SCAN,
+		NULL);
+}
+
+inline FileReader::FileReader(const wtxt &fn)
+{
+	rd_lim = 0;
+	ih = CreateFileW(
+		fn,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_SEQUENTIAL_SCAN,
+		NULL);
+}
+
+inline FileReader::~FileReader()
+{
+	CloseHandle(ih);
+}
+
+inline FileReader::operator bool64()
+{
+	return ih != INVALID_HANDLE_VALUE;
+}
+
+inline FileReader & FileReader::operator>(txt &t)
+{
+	DWORD br;
+	if(rd_lim == 0)
+	{
+		ui64 fsz = GetFileSz();
+		t = fsz;
+		txtssz(t, fsz);
+		ReadFile(ih, t, fsz, &br, NULL);
+		return *this;
+	}
+	
+	t = rd_lim;
+	ReadFile(ih, t, rd_lim, &br, NULL);
+	txtssz(t, br);
+	return *this;
+}
+
+inline FileReader & FileReader::operator>(wtxt &wt)
+{
+	DWORD br;
+	if(rd_lim == 0)
+	{
+		ui64 fsz = GetFileSz();
+		wt = fsz/sizeof(wchar_t);
+		txtssz(wt, !wt);
+		ReadFile(ih, wt, fsz * sizeof(wchar_t), &br, NULL);
+		return *this;
+	}
+	
+	wt = rd_lim;
+	ReadFile(ih, wt, rd_lim * sizeof(wchar_t), &br, NULL);
+	txtssz(wt, br/sizeof(wchar_t));
+	return *this;
+}
+
+inline FileReader & FileReader::operator>(binf &bf)
+{
+	DWORD br;
+	if(rd_lim == 0)
+	{
+		ui64 fsz = GetFileSz();
+		bf = fsz;
+		bf.SetSize(fsz);
+		ReadFile(ih, bf, fsz, &br, NULL);
+		return *this;
+	}
+	
+	bf = rd_lim;
+	ReadFile(ih, bf, rd_lim, &br, NULL);
+	bf.SetSize(br);
+	return *this;
+}
+
+inline FileReader & FileReader::operator>(FileReader &(*func)(FileReader &fr))
+{
+	return func(*this);
+}
+
+inline FileReader & FileReader::operator>(FileReader &fr)
+{
+	return fr;
+}
+
+inline FileReader & FileReader::operator>(FileRdLim frl)
+{
+	rd_lim = frl.lim;
+	return *this;
+}
+
+inline FileReader & FileReader::operator<(FileInfoA fi)
+{
+	if(ih != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(ih);
+	}
+	
+	ih = CreateFileA(
+		fi.fn,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_SEQUENTIAL_SCAN,
+		NULL);
+	return *this;
+}
+
+inline FileReader & FileReader::operator<(FileInfoW fi)
+{
+	if(ih != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(ih);
+	}
+	
+	ih = CreateFileW(
+		fi.fn,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_SEQUENTIAL_SCAN,
+		NULL);
+	return *this;
+}
+
+inline FileReader & FC(FileReader &fr)
+{
+	CloseHandle(fr.ih);
+	fr.ih = INVALID_HANDLE_VALUE;
+	fr.rd_lim = 0;
+	return fr;
+}
+
+inline FileRdLim FRL(ui64 maxb)
+{
+	FileRdLim frl = { maxb };
+	return frl;
+}
+
+inline ui64 FileReader::GetFileSz()
+{
+	LARGE_INTEGER fsz;
+	GetFileSizeEx(ih, &fsz);
+	return fsz.QuadPart;
+}
+
+
+
+
+// fileprinterreader > inheritz fileprinter addz > ops
