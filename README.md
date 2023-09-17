@@ -61,7 +61,7 @@ Just double-click the `msvc_build.cmd` file. Yep. As easy as this. Well, that is
 set "bat_dir=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 set "bin_dir=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.34.31933\bin\HostX64\x64"
 ```
-If not, you will have to merely located this file and directory and copy-paste it into the `msvc_build.cmd`. Then just launch it and wait until it does all the job for you. Yes, you don't even need to open the Visual Studio. Ever. I recommend you to try out my [Notepad++ C++ IDE](https://github.com/ScienceDiscoverer/npp_msvc_ide), if you like the idea of ditching the bloated, laggy and overengineered VS!
+If not, you will have to merely locate this file and directory and copy-paste them into the `msvc_build.cmd`. Then just launch it and wait until it does all the job for you. Yes, you don't even need to open the Visual Studio. Ever. I recommend you to try out my [Notepad++ C++ IDE](https://github.com/ScienceDiscoverer/npp_msvc_ide), if you like the idea of ditching the bloated, laggy and overengineered VS!
 
 ## Examples & Testing
 

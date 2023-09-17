@@ -49,27 +49,26 @@ for %%f in (*.cpp) do (
 exit
 
 :build_func
-
-set "ico_name="
-set "manifest_name="
-set "res_name=main"
-set "build_rc=0"
-set "no_res=1"
+set "res_name=%name%"
+set "ico_name=%name%"
+set "man_name=%name%"
+set "rc_file_path="
 set "subsys=WINDOWS"
 set "seh=/EHsc"
 set "optim=/O2 /Oi /GL /Gy"
 set "linkopt=/LTCG /INCREMENTAL:NO"
 set "warns=/Wall"
 set "slib="
+set "dlib="
+set "dll_imp_exp="
 set "asm="
 set "debug=/MT"
 set "debug_link="
 set "debug_def="
 set "no_def_lib=/NODEFAULTLIB:libcmtd.lib"
-set "build_inc="
 set "start_up=/ENTRY:wmainCRTStartup"
 set "res_file="
-set "inc_dir=/I %~dp0\lib\"
+set "inc_dir=/I %~dp0\lib /I res\rc"
 set "lib_dir=/LIBPATH:%~dp0\lib\"
 
 title sd_msvc_build
@@ -83,6 +82,8 @@ for /f "tokens=1,* delims= " %%a in ("%fline%") do (
 	if "%%a"=="NOPT" set "optim=/Od" & set "linkopt="
 	if "%%a"=="NW" set "warns=/w"
 	if "%%a"=="SLIB" set "slib=/c"
+	if "%%a"=="DLIB" set "dlib=/DLL" & set "dll_imp_exp=/NOIMPLIB /NOEXP" & set "debug=/LD" & set "start_up=/ENTRY:_DllMainCRTStartup"
+	if "%%a"=="DLLIE" set "dll_imp_exp="
 	if "%%a"=="DBG" set "debug=/MTd /Z7" & set "debug_link=/DEBUG" & set "debug_def=/D DEBUG" & set "no_def_lib=/NODEFAULTLIB:libcmt.lib"
 	if "%%a"=="EPMAIN" set "start_up=/ENTRY:mainCRTStartup"
 	
@@ -90,45 +91,46 @@ for /f "tokens=1,* delims= " %%a in ("%fline%") do (
 	goto :parse_loop
 )
 
-if not exist man ( set "res_name=%name%" & goto :nomanifest ) else ( set "no_res=0" )
-if not exist ico set "res_name=%name%" & goto :nodefres
-if not exist man\%name%.manifest ( if not exist ico\%name%.ico (
-if not exist res mkdir res
-if not exist res\%res_name%.res (
-echo 1 24 "man\%res_name%.manifest"> res\%res_name%.rc
-echo MAINICON ICON "ico\%res_name%.ico">> res\%res_name%.rc
-set "build_rc=1" )
-if exist res\%name%.res ( set "res_name=%name%" )
-goto :noico ) else ( set "res_name=%name%" ) ) else ( set "res_name=%name%" )
+if "%slib%"=="/c" goto :nores
+if not exist res goto :nores
+if exist res\%name%.res goto :setres
+if exist res\rc\%name%.rc set "rc_file_path=res\rc\%name%.rc" & goto :buildrc
 
-:nodefres
+if not exist res\ico ( if not exist res\man goto :nores )
+if not exist res\ico\%name%.ico ( if not exist res\man\%man_name%.manifest set "res_name=main" )
+if "%res_name%"=="main" ( if exist res\main.res goto :setres )
 
-if not exist man\%name%.manifest ( set "manifest_name=main" ) else ( set "manifest_name=%name%" )
-if not exist res mkdir res
-if not exist res\%res_name%.res (
-echo 1 24 "man\%manifest_name%.manifest"> res\%res_name%.rc
-set "build_rc=1" )
-:: REMEMBER TO MAKE ID 2 FOR DLL!
+if exist res\ico call :addicon
+if exist res\man call :addman
 
-:nomanifest
+set "rc_file_path=res\%res_name%.rc"
+goto :buildrc
 
-if not exist ico ( goto :noico ) else ( set "no_res=0" )
-if not exist ico\%name%.ico ( set "ico_name=main" ) else ( set "ico_name=%name%" )
-if not exist res mkdir res
-if not exist res\%res_name%.res (
-if "%build_rc%"=="1" ( echo MAINICON ICON "ico\%ico_name%.ico">> res\%res_name%.rc ) else ( echo MAINICON ICON "ico\%ico_name%.ico"> res\%res_name%.rc ) 
-set "build_rc=1" )
+:addicon
+if not exist res\ico\%name%.ico set "ico_name=main"
+echo MAINICON ICON "res\\ico\\%ico_name%.ico">> res\%res_name%.rc
+exit /b
+:addman
+if not exist res\man\%name%.manifest set "man_name=main"
+if "%dlib%"=="/DLL" ( set "man_id=2" ) else ( set "man_id=1" )
+echo %man_id% 24 "res\\man\\%man_name%.manifest">> res\%res_name%.rc
+exit /b
+:: Process manifests, with ID CREATEPROCESS_MANIFEST_RESOURCE_ID (1), used during process creation
+:: Isolation-Aware manifests, with ID ISOLATIONAWARE_MANIFEST_RESOURCE_ID (2), used during DLL loading
 
-:noico
+:buildrc
+rc /r /nologo /fo res\%res_name%.res %rc_file_path%
+:setres
+set "res_file=res\%res_name%.res"
+:nores
 
-if "%build_rc%"=="1" rc /r /nologo res\%res_name%.rc
-
-if "%no_res%"=="0" ( if "%slib%"=="" set "res_file=res\%res_name%.res" )
-
-if "%debug%"=="/MTd /Z7" ( if "%optim%" neq "/Od" set "optim=/O2 /Oi /Gy" & set "linkopt=" )
+if "%debug%"=="/MTd /Z7" (
+	if "%optim%" neq "/Od" set "optim=/O2 /Oi /Gy" & set "linkopt="
+	if "%dlib%"=="/DLL" set "debug=/LDd /Z7"
+)
 
 :recompile
-cl %warns% %disabled_warns% /external:anglebrackets /external:W0 /diagnostics:caret /I %~dp0 %optim% %debug_def% /D _%subsys% /D _UNICODE /D UNICODE /D _CRT_SECURE_NO_WARNINGS /Gm- %seh% %debug% /FC /GS- /J /permissive- /nologo %slib% %asm% %inc_dir% %name%.cpp %res_file% %obj_out_dir% /link /SUBSYSTEM:%subsys% %linkopt% %debug_link% %lib_dir% /DYNAMICBASE:NO /MACHINE:X64 %start_up% /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib %no_def_lib%
+cl %warns% %disabled_warns% /external:anglebrackets /external:W0 /diagnostics:caret /I %~dp0 %optim% %debug_def% /D _%subsys% /D _UNICODE /D UNICODE /D _CRT_SECURE_NO_WARNINGS /Gm- %seh% %debug% /FC /GS- /J /permissive- /nologo %slib% %asm% %inc_dir% %name%.cpp %res_file% %obj_out_dir% /link %dlib% /SUBSYSTEM:%subsys% %linkopt% %debug_link% %lib_dir% %dll_imp_exp% /DYNAMICBASE:NO /MACHINE:X64 %start_up% /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib %no_def_lib%
 
 if %ERRORLEVEL% equ 1 pause >nul & exit /b
 if %ERRORLEVEL% equ 2 pause >nul & goto :cleanup
