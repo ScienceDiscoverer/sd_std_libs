@@ -1,0 +1,381 @@
+#pragma once
+
+#include <wtxta>
+//#include <txta>
+
+#include <fnmanip.h>
+
+#ifdef DEBUG
+	#pragma comment( lib, "ftoolsd" )
+#else
+	#pragma comment( lib, "ftools" )
+#endif
+
+//#include <ui64a>
+
+//bool64 skip_hidden = true;
+//bool64 skip_hidden = false;
+//bool64 ext_ignore_case = true;
+
+extern wtxta dirs_up;			// Upper level of directory tree
+extern wtxta dirs_low;			// Lower level of directory tree
+extern const cwstr *ign_dirs;	// Directories to ignore
+
+// Input example:
+// cwstr dirs = {
+//	WL("D:\baka"),
+//	WL("D:\cheese"),
+//	WL("") };
+
+void scan(const wtxt &dir, wtxta &list);
+void scanIgn(const wtxt &dir, wtxta &list);
+void scan(const wtxt &dir, wtxta &list, const cwstr *ext, ui64 exts);
+void scanIgn(const wtxt &dir, wtxta &list, const cwstr *ext, ui64 exts);
+
+inline ui64 getFileList(const cwstr *dirs, wtxta &list)
+{
+	dirs_up = dirs;
+	while(~dirs_up != 0)
+	{
+		for(ui64 i = 0; i < ~dirs_up; ++i)
+		{
+			scan(dirs_up[i], list);
+		}
+		
+		dirs_low.MoveInto(dirs_up);
+	}
+	
+	return ~list;
+}
+
+inline ui64 getFileList(const cwstr *dirs, const cwstr *idirs, wtxta &list)
+{
+	dirs_up = dirs;
+	ign_dirs = idirs;
+	while(~dirs_up != 0)
+	{
+		for(ui64 i = 0; i < ~dirs_up; ++i)
+		{
+			scanIgn(dirs_up[i], list);
+		}
+		
+		dirs_low.MoveInto(dirs_up);
+	}
+	
+	return ~list;
+}
+
+inline ui64 getFileList(const cwstr *dirs, const cwstr *ext, ui64 exts, wtxta &list)
+{
+	dirs_up = dirs;
+	while(~dirs_up != 0)
+	{
+		for(ui64 i = 0; i < ~dirs_up; ++i)
+		{
+			scan(dirs_up[i], list, ext, exts);
+		}
+		
+		dirs_low.MoveInto(dirs_up);
+	}
+	
+	return ~list;
+}
+
+inline ui64 getFileList(const cwstr *dirs, const cwstr *idirs, const cwstr *ext, ui64 exts, wtxta &list)
+{
+	dirs_up = dirs;
+	ign_dirs = idirs;
+	while(~dirs_up != 0)
+	{
+		for(ui64 i = 0; i < ~dirs_up; ++i)
+		{
+			scanIgn(dirs_up[i], list, ext, exts);
+		}
+		
+		dirs_low.MoveInto(dirs_up);
+	}
+	
+	return ~list;
+}
+
+inline bool64 fileExists(const char *fn)
+{
+	DWORD attr = GetFileAttributesA(fn);
+	if(attr == INVALID_FILE_ATTRIBUTES)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+inline bool64 fileExists(const wchar_t *fn)
+{
+	DWORD attr = GetFileAttributesW(fn);
+	if(attr == INVALID_FILE_ATTRIBUTES)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+/*struct _BY_HANDLE_FILE_INFORMATION
+{
+	DWORD    dwFileAttributes;
+	FILETIME ftCreationTime;
+	FILETIME ftLastAccessTime;
+	FILETIME ftLastWriteTime;
+	DWORD    dwVolumeSerialNumber;
+	DWORD    nFileSizeHigh;
+	DWORD    nFileSizeLow;
+	DWORD    nNumberOfLinks;
+	DWORD    nFileIndexHigh;
+	DWORD    nFileIndexLow;
+};*/
+
+inline void getFileHandleInfo(const wchar_t *fn, BY_HANDLE_FILE_INFORMATION &bhfi)
+{
+	// Create or open File or Device =================================================================
+	HANDLE fh = CreateFile(
+	fn,							//   [I]  Name of the file or device to create/open
+	FILE_READ_ATTRIBUTES,		//   [I]  Requested access GENERIC_READ|GENERIC_WRITE|0
+	0,							//   [I]  Sharing mode FILE_SHARE_READ|WRITE|DELETE|0
+	NULL,						// [I|O]  SECURITY_ATTRIBUTES for file, handle inheritability
+	OPEN_EXISTING,				//   [I]  Action to take if file/device exist or not
+	0,							//   [I]  Attributes and flags for file/device
+	NULL);						// [I|O]  Handle to template file to copy attributes from
+	// ===============================================================================================
+	GetFileInformationByHandle(fh, &bhfi);
+	CloseHandle(fh);
+}
+
+inline ui64 getFileSize(const wchar_t *fn)
+{
+	BY_HANDLE_FILE_INFORMATION bhfi;
+	getFileHandleInfo(fn, bhfi);
+	return (ui64)bhfi.nFileSizeHigh << 32 | (ui64)bhfi.nFileSizeLow;
+}
+
+//inline ui64 getFileCreationTime(const wchar_t *fn)
+//{
+//	BY_HANDLE_FILE_INFORMATION bhfi;
+//	getFileHandleInfo(fn, bhfi);
+//	return *((ui64 *)&bhfi.ftCreationTime);
+//}
+//
+//inline ui64 getFileAccessTime(const wchar_t *fn)
+//{
+//	BY_HANDLE_FILE_INFORMATION bhfi;
+//	getFileHandleInfo(fn, bhfi);
+//	return *((ui64 *)&bhfi.ftLastAccessTime);
+//}
+//
+//inline ui64 getFileWriteTime(const wchar_t *fn)
+//{
+//	BY_HANDLE_FILE_INFORMATION bhfi;
+//	getFileHandleInfo(fn, bhfi);
+//	return *((ui64 *)&bhfi.ftLastWriteTime);
+//}
+
+//inline ui64 fileTimeYear(ui64 ft) // Usefull when only need to get year ASAP
+//{
+//	SYSTEMTIME fst;
+//	FileTimeToSystemTime((FILETIME *)&ft, &fst);
+//	return fst.wYear;
+//}
+//
+//inline ui64 fileTimeMonth(ui64 ft)
+//{
+//	SYSTEMTIME fst;
+//	FileTimeToSystemTime((FILETIME *)&ft, &fst);
+//	return fst.wMonth;
+//}
+
+struct Time {
+	ui16 y;
+	ui8 m;
+	ui8 d;
+	ui8 hrs;
+	ui8 min;
+	ui8 sec;
+	ui8 reserved;
+};
+
+inline Time getFileCreationTime(const wchar_t *fn)
+{
+	BY_HANDLE_FILE_INFORMATION bhfi;
+	getFileHandleInfo(fn, bhfi);
+	SYSTEMTIME fst;
+	FILETIME tloc;
+	FileTimeToLocalFileTime(&bhfi.ftCreationTime, &tloc);
+	FileTimeToSystemTime(&tloc, &fst);
+	Time t;
+	t.y = fst.wYear;
+	t.m = (ui8)fst.wMonth;
+	t.d = (ui8)fst.wDay;
+	t.hrs = (ui8)fst.wHour;
+	t.min = (ui8)fst.wMinute;
+	t.sec = (ui8)fst.wSecond;
+	return t;
+}
+
+inline Time getFileAccessTime(const wchar_t *fn)
+{
+	BY_HANDLE_FILE_INFORMATION bhfi;
+	getFileHandleInfo(fn, bhfi);
+	SYSTEMTIME fst;
+	FILETIME tloc;
+	FileTimeToLocalFileTime(&bhfi.ftLastAccessTime, &tloc);
+	FileTimeToSystemTime(&tloc, &fst);
+	Time t;
+	t.y = fst.wYear;
+	t.m = (ui8)fst.wMonth;
+	t.d = (ui8)fst.wDay;
+	t.hrs = (ui8)fst.wHour;
+	t.min = (ui8)fst.wMinute;
+	t.sec = (ui8)fst.wSecond;
+	return t;
+}
+
+inline Time getFileWriteTime(const wchar_t *fn)
+{
+	BY_HANDLE_FILE_INFORMATION bhfi;
+	getFileHandleInfo(fn, bhfi);
+	SYSTEMTIME fst;
+	FILETIME tloc;
+	FileTimeToLocalFileTime(&bhfi.ftLastWriteTime, &tloc);
+	FileTimeToSystemTime(&tloc, &fst);
+	Time t;
+	t.y = fst.wYear;
+	t.m = (ui8)fst.wMonth;
+	t.d = (ui8)fst.wDay;
+	t.hrs = (ui8)fst.wHour;
+	t.min = (ui8)fst.wMinute;
+	t.sec = (ui8)fst.wSecond;
+	return t;
+}
+
+inline void setFileTimeFromLocal(const wchar_t *fn, Time t)
+{
+	SYSTEMTIME st_loc;
+	st_loc.wYear = t.y;
+	st_loc.wMonth = t.m;
+	st_loc.wDay = t.d;
+	st_loc.wHour = t.hrs;
+	st_loc.wMinute = t.min;
+	st_loc.wSecond = t.sec;
+	st_loc.wMilliseconds = 0;
+	st_loc.wDayOfWeek = UI16_MAX; // Ignored when passed to SystemTimeToFileTime
+	
+	SYSTEMTIME st_utc;
+	TzSpecificLocalTimeToSystemTime(NULL, &st_loc, &st_utc);
+	
+	FILETIME ft_utc;
+	SystemTimeToFileTime(&st_utc, &ft_utc);
+	
+	// Create or open File or Device =================================================================
+	HANDLE f = CreateFile(
+		fn,							//   [I]  Name of the file or device to create/open
+		FILE_WRITE_ATTRIBUTES,		//   [I]  Requested access GENERIC_READ|GENERIC_WRITE|0
+		NULL,						//   [I]  Sharing mode FILE_SHARE_READ|WRITE|DELETE|0
+		NULL,						// [I|O]  SECURITY_ATTRIBUTES for file, handle inheritability
+		OPEN_EXISTING,				//   [I]  Action to take if file/device exist or not
+		NULL,						//   [I]  Attributes and flags for file/device
+		NULL);						// [I|O]  Handle to template file to copy attributes from
+	// ===============================================================================================
+	
+	SetFileTime(f, &ft_utc, &ft_utc, &ft_utc);
+	CloseHandle(f); // Always check the handle!
+}
+
+inline void setFileTimeFromUtc(const wchar_t *fn, Time t) // TODO ADD SETTERS FOR INDIVIDUAL TIMES CREATE/ACC/MOD
+{
+	SYSTEMTIME st_utc;
+	st_utc.wYear = t.y;
+	st_utc.wMonth = t.m;
+	st_utc.wDay = t.d;
+	st_utc.wHour = t.hrs;
+	st_utc.wMinute = t.min;
+	st_utc.wSecond = t.sec;
+	st_utc.wMilliseconds = 0;
+	st_utc.wDayOfWeek = UI16_MAX;
+	
+	FILETIME ft_utc;
+	SystemTimeToFileTime(&st_utc, &ft_utc);
+	
+	// Create or open File or Device =================================================================
+	HANDLE f = CreateFile(
+		fn,							//   [I]  Name of the file or device to create/open
+		FILE_WRITE_ATTRIBUTES,		//   [I]  Requested access GENERIC_READ|GENERIC_WRITE|0
+		NULL,						//   [I]  Sharing mode FILE_SHARE_READ|WRITE|DELETE|0
+		NULL,						// [I|O]  SECURITY_ATTRIBUTES for file, handle inheritability
+		OPEN_EXISTING,				//   [I]  Action to take if file/device exist or not
+		NULL,						//   [I]  Attributes and flags for file/device
+		NULL);						// [I|O]  Handle to template file to copy attributes from
+	// ===============================================================================================
+	SetFileTime(f, &ft_utc, &ft_utc, &ft_utc);
+	CloseHandle(f); // Always check the handle!
+}
+
+inline void setCrtModFileTimeFromLocal(const wchar_t *fn, Time t)
+{
+	SYSTEMTIME st_loc;
+	st_loc.wYear = t.y;
+	st_loc.wMonth = t.m;
+	st_loc.wDay = t.d;
+	st_loc.wHour = t.hrs;
+	st_loc.wMinute = t.min;
+	st_loc.wSecond = t.sec;
+	st_loc.wMilliseconds = 0;
+	st_loc.wDayOfWeek = UI16_MAX; // Ignored when passed to SystemTimeToFileTime
+	
+	SYSTEMTIME st_utc;
+	TzSpecificLocalTimeToSystemTime(NULL, &st_loc, &st_utc);
+	
+	FILETIME ft_utc;
+	SystemTimeToFileTime(&st_utc, &ft_utc);
+	
+	// Create or open File or Device =================================================================
+	HANDLE f = CreateFile(
+		fn,							//   [I]  Name of the file or device to create/open
+		FILE_WRITE_ATTRIBUTES,		//   [I]  Requested access GENERIC_READ|GENERIC_WRITE|0
+		NULL,						//   [I]  Sharing mode FILE_SHARE_READ|WRITE|DELETE|0
+		NULL,						// [I|O]  SECURITY_ATTRIBUTES for file, handle inheritability
+		OPEN_EXISTING,				//   [I]  Action to take if file/device exist or not
+		NULL,						//   [I]  Attributes and flags for file/device
+		NULL);						// [I|O]  Handle to template file to copy attributes from
+	// ===============================================================================================
+	
+	SetFileTime(f, &ft_utc, NULL, &ft_utc);
+	CloseHandle(f); // Always check the handle!
+}
+
+inline void setCrtModFileTimeFromUtc(const wchar_t *fn, Time t) // TODO ADD SETTERS FOR INDIVIDUAL TIMES CREATE/ACC/MOD
+{
+	SYSTEMTIME st_utc;
+	st_utc.wYear = t.y;
+	st_utc.wMonth = t.m;
+	st_utc.wDay = t.d;
+	st_utc.wHour = t.hrs;
+	st_utc.wMinute = t.min;
+	st_utc.wSecond = t.sec;
+	st_utc.wMilliseconds = 0;
+	st_utc.wDayOfWeek = UI16_MAX;
+	
+	FILETIME ft_utc;
+	SystemTimeToFileTime(&st_utc, &ft_utc);
+	
+	// Create or open File or Device =================================================================
+	HANDLE f = CreateFile(
+		fn,							//   [I]  Name of the file or device to create/open
+		FILE_WRITE_ATTRIBUTES,		//   [I]  Requested access GENERIC_READ|GENERIC_WRITE|0
+		NULL,						//   [I]  Sharing mode FILE_SHARE_READ|WRITE|DELETE|0
+		NULL,						// [I|O]  SECURITY_ATTRIBUTES for file, handle inheritability
+		OPEN_EXISTING,				//   [I]  Action to take if file/device exist or not
+		NULL,						//   [I]  Attributes and flags for file/device
+		NULL);						// [I|O]  Handle to template file to copy attributes from
+	// ===============================================================================================
+	SetFileTime(f, &ft_utc, NULL, &ft_utc);
+	CloseHandle(f); // Always check the handle!
+}

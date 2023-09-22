@@ -37,3 +37,11 @@ inline void printProgBar(ui64 max, ui64 cur, ui64 x, ui64 y, ui64 len)
 		++prog_pos.X;
 	}
 }
+
+inline void printProgBarMod(ui64 mod, ui64 max, ui64 cur, ui64 x, ui64 y, ui64 len)
+{
+	if(cur % mod == 0)
+	{
+		printProgBar(max, cur, x, y, len);
+	}
+}

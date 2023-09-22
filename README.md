@@ -11,7 +11,7 @@ Personal take on implementing all the standard C++ and C libraries using just lo
 * Wide text type (`wtxt`) is not done by the way of a lazy template. It is a total copy of the `txt` except for the parts specific for the wide type. It is totally independent from `txt` and can be used by itself. Therefore, it is as fast, or sometimes even faster than `txt` and much faster than `std::wstring`.
 * Dynamic array built without the overhead of templates. Currently arrays of texts and ints are supported, but custom array for any type can be quickly constructed if needed (replaces `std::vector` and `std::array`).
 * Powerful console writer (replaces `std::iostream`) with compact syntax that supports colours, formatting, pauses, padding, table output, console buffer trimming and more!
-* Fast and simple console input handler
+* Fast and simple console input handler.
 * Printer to text types (replaces `std::stringstream`).
 * Fast file printers/readers (replaces `std::fstream`).
 * Custom math library. Not too many functions there yet, but I add only the ones I ever needed. And ones I actually understand, currently.
@@ -31,7 +31,8 @@ Personal take on implementing all the standard C++ and C libraries using just lo
 * `fileinf.h` - supporting header for all file printers/readers
 * `filep` - file printer
 * `filer` - file reader
-* `filepr` - file printer/reader
+* `filepr` - file printer/reader *(under construction)*
+* `ftools` - helpful functions for listing/changing files
 * `fnmanip.h` - small file name manipulation helper library
 * `math` - mathematical functions
 * `mmanip` - low level memory manipulation
@@ -55,13 +56,18 @@ Personal take on implementing all the standard C++ and C libraries using just lo
 
 ## How to build
 
-Just double-click the `msvc_build.cmd` file. Yep. As easy as this. Well, that is, if you have your Visual Studio installed, of course. And if your VS `vcvars64.bat` file and `bin\HostX64\x64` directory are located at this paths:
+Just double-click the `msvc_build.cmd` file. Yep. As easy as this. Well, that is, if you have your Visual Studio installed, of course. And if your VS `vcvars64.bat` file is located at this path:
 
 ```
 set "bat_dir=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-set "bin_dir=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.34.31933\bin\HostX64\x64"
 ```
-If not, you will have to merely locate this file and directory and copy-paste them into the `msvc_build.cmd`. Then just launch it and wait until it does all the job for you. Yes, you don't even need to open the Visual Studio. Ever. I recommend you to try out my [Notepad++ C++ IDE](https://github.com/ScienceDiscoverer/npp_msvc_ide), if you like the idea of ditching the bloated, laggy and overengineered VS!
+If not, first of all, make sure the [Visual Studio](https://visualstudio.microsoft.com/downloads/) is installed. In the setup wizard you will see a huge list of useless features and bloat. Only the C++ build tools are actually needed. Switch to `Individual components` and try to find this in the humongous list:
+
+```
+MSVC vXXX - VS 202X C++ x64/x86 build tools (Latest)
+```
+
+After this you will have to merely locate the `vcvars64.bat` file and copy-paste the path to it into `msvc_build.cmd`. Then just launch it and wait until it does all the job for you. Yes, you don't even need to install or open the Visual Studio IDE itself. Ever. I recommend you to try out my [Notepad++ C++ IDE](https://github.com/ScienceDiscoverer/npp_msvc_ide), if you like the idea of ditching the bloated, laggy and overengineered VS!
 
 ## Examples & Testing
 

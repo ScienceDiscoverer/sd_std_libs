@@ -6,9 +6,10 @@ HINSTANCE exec_adress;
 ATOM main_class;
 HWND main_wnd;
 
+HDC main_dc;
 HFONT default_font;
 HBRUSH backgrnd;
-HDC main_dc;
+COLORREF def_back = 0x0C0C0C; // 0x00BBGGRR
 
 ui64 cellw = 8, cellh = 16;
 ui64 clw, clh;
@@ -25,9 +26,7 @@ RECT work_pix;
 
 bool64 topmost;
 
-static COLORREF def_back = 0x0C0C0C; // 0x00BBGGRR
-
-ATOM initGui(WNDPROC wnd_proc)
+ATOM initGui(WNDPROC wnd_proc, ui64 opts)
 {
 	exec_adress = GetModuleHandle(NULL);
 
@@ -65,22 +64,23 @@ ATOM initGui(WNDPROC wnd_proc)
 	if(main_class == 0)
 	{
 		HICON ico = LoadIcon(exec_adress, L"MAINICON");
+		HCURSOR cur = opts & IG_CUSTOM_CUR ? NULL : LoadCursor(NULL, IDC_ARROW);
 		backgrnd = CreateSolidBrush(def_back);
 
 		// Register Window Class Atom ==============================================================
 		WNDCLASSEX wc;
-		wc.cbSize = sizeof(WNDCLASSEX);					// Structure size in bytes
-		wc.style = CS_DBLCLKS;							// Class style, any combination
-		wc.lpfnWndProc = wnd_proc;						// Window callback function
-		wc.cbClsExtra = 0;								// Extra Class Memory (max 40B)
-		wc.cbWndExtra = 0;								// Extra Window Memory (max 40B)
-		wc.hInstance = exec_adress;						// Handle to module's instance
-		wc.hIcon = ico;									// Def. icon for all windows
-		wc.hCursor = LoadCursor(NULL, IDC_ARROW);		// Def. cursor for all windows
-		wc.hbrBackground = backgrnd;					// Def. brush for WM_ERASEBKGND
-		wc.lpszMenuName = NULL;							// Def. menu name for all w.
-		wc.lpszClassName = L"wndintMainWnd";			// Name of the Class (Atom)
-		wc.hIconSm = 0;									// Def. small icon for all w.
+		wc.cbSize = sizeof(WNDCLASSEX);				// Structure size in bytes
+		wc.style = CS_DBLCLKS;						// Class style, any combination
+		wc.lpfnWndProc = wnd_proc;					// Window callback function
+		wc.cbClsExtra = 0;							// Extra Class Memory (max 40B)
+		wc.cbWndExtra = 0;							// Extra Window Memory (max 40B)
+		wc.hInstance = exec_adress;					// Handle to module's instance
+		wc.hIcon = ico;								// Def. icon for all windows
+		wc.hCursor = cur;							// DC. If NULL app must set cur every time
+		wc.hbrBackground = backgrnd;				// Def. brush for WM_ERASEBKGND
+		wc.lpszMenuName = NULL;						// Def. menu name for all w.
+		wc.lpszClassName = L"wndintMainWnd";		// Name of the Class (Atom)
+		wc.hIconSm = 0;								// Def. small icon for all w.
 
 		main_class = RegisterClassEx(&wc);
 		// =========================================================================================
@@ -89,36 +89,40 @@ ATOM initGui(WNDPROC wnd_proc)
 	return main_class;
 }
 
-HWND spawnMainWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y)
+inline static void pickStyle(ui64 style, DWORD &ws_style, DWORD &ws_ex_style)
 {
-	DWORD style_norm, style_ex = WS_EX_COMPOSITED;
-	
 	if(style & W_BARE)
 	{
-		style_norm = WS_POPUP;
+		ws_style = WS_POPUP;
 	}
 	else if(style & W_MIN_TITLE)
 	{
-		style_norm = WS_THICKFRAME | WS_SYSMENU;
+		ws_style = WS_THICKFRAME | WS_SYSMENU;
 	}
 	else if(style & W_FULL_TITLE)
 	{
-		style_norm = WS_OVERLAPPEDWINDOW;
+		ws_style = WS_OVERLAPPEDWINDOW;
 	}
 	else
 	{
-		style_norm = WS_OVERLAPPEDWINDOW;
+		ws_style = WS_OVERLAPPEDWINDOW;
 	}
 	
 	if(style & W_SCROLL)
 	{
-		style_norm |= WS_VSCROLL | WS_HSCROLL;
+		ws_style |= WS_VSCROLL | WS_HSCROLL;
 	}
 	
 	if(style & W_HIDE_TBAR)
 	{
-		style_ex |= WS_EX_TOOLWINDOW;
+		ws_ex_style |= WS_EX_TOOLWINDOW;
 	}
+}
+
+HWND spawnMainWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y)
+{
+	DWORD style_norm = 0, style_ex = WS_EX_COMPOSITED;
+	pickStyle(style, style_norm, style_ex);
 
 	//SystemParametersInfo(SPI_GETWORKAREA, 0, &work_pix, 0);
 	//i32 x = (work_pix.right - work_pix.left - w)/2;
@@ -201,6 +205,30 @@ finish:
 	return spawnMainWnd(style, title, w, h, x, y);
 }
 #pragma warning( default : 4701 )
+
+HWND spawnWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y)
+{
+	DWORD style_norm = 0, style_ex = WS_EX_COMPOSITED;
+	pickStyle(style, style_norm, style_ex);
+
+	// Create Window ===========================================================================
+	HWND wnd = CreateWindowExW(
+		style_ex,				//   [I] Extended window style
+		(LPCWSTR)main_class,	// [I|O] Class Atom / Class Atom String
+		title,					// [I|O] Window name String (Title)
+		style_norm,				//   [I] Window style (WS_OVERLAPPED = 0x0)
+		x, y, w, h,				//   [I] PosX, PoxY, Width, Height
+		NULL,					// [I|O] Handle to this window's parent
+		NULL,					// [I|O] Handle to menu / Child-window ID
+		exec_adress,			// [I|O] Handle to instance of the module
+		NULL);					// [I|O] CREATESTRUCT ptr. for lParam of WM_CREATE
+	// =========================================================================================
+
+	UpdateWindow(wnd);
+	ShowWindow(wnd, SW_NORMAL);
+
+	return wnd;
+}
 
 LRESULT wmMovingSnap(LPARAM lp)
 {

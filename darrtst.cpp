@@ -120,6 +120,43 @@ const wtxt rval_ret_wctxta[] = {
 	WL("Array entry #33"),
 	WL("") };
 
+cwstr cwstr_arr[] = {
+	WL("Array entry #0"),
+	WL("Array entry #1"),
+	WL("Array entry #2"),
+	WL("Array entry #3"),
+	WL("Array entry #4"),
+	WL("Array entry #5"),
+	WL("Array entry #6"),
+	WL("Array entry #7"),
+	WL("Array entry #8"),
+	WL("Array entry #9"),
+	WL("Array entry #10"),
+	WL("Array entry #11"),
+	WL("Array entry #12"),
+	WL("Array entry #13"),
+	WL("Array entry #14"),
+	WL("Array entry #15"),
+	WL("Array entry #16"),
+	WL("Array entry #17"),
+	WL("Array entry #18"),
+	WL("Array entry #19"),
+	WL("Array entry #20"),
+	WL("Array entry #21"),
+	WL("Array entry #22"),
+	WL("Array entry #23"),
+	WL("Array entry #24"),
+	WL("Array entry #25"),
+	WL("Array entry #26"),
+	WL("Array entry #27"),
+	WL("Array entry #28"),
+	WL("Array entry #29"),
+	WL("Array entry #30"),
+	WL("Array entry #31"),
+	WL("Array entry #32"),
+	WL("Array entry #33"),
+	WL("") };
+
 txta rval_ret_txta_empty = rval_ret_cstra;
 txta rval_ret_txta_sz(rval_ret_cstra, 34);
 
@@ -128,6 +165,9 @@ wtxta rval_ret_wtxta_sz(rval_ret_wcstra, 34);
 
 wtxta rval_ret_wtxta_empty_wtxt = rval_ret_wctxta;
 wtxta rval_ret_wtxta_sz_wtxt(rval_ret_wctxta, 34);
+
+wtxta cwstr_arr_empty_wtxt = cwstr_arr;
+wtxta cwstr_arr_sz_wtxt(cwstr_arr, 34);
 
 txta __declspec(noinline) rvalTxtReturner()
 {
@@ -163,6 +203,7 @@ i32 wmain()
 	txta empty_txta;
 	TBOOL("TXTA TOTALLY EMPTY CHECK", empty_txta == empty, true);
 	TBOOL("TXTA TOTALLY NOT EMPTY CHECK", ta == empty, false);
+	
 }
 {
 	const char *lval_res_construct_cstra[] = {
@@ -218,11 +259,18 @@ i32 wmain()
 {
 	wtxta ta = rvalWtxtReturner();
 	
+	wtxta cwstr_ass = ta;
+	cwstr_ass = cwstr_arr;
+	
 	T("WTXTA RVAL GLOBAL CSTRA INIT EMPTY TERMINATED", ta, rval_ret_wtxta_empty);
 	T("WTXTA RVAL GLOBAL CSTRA INIT SIZE KNOWN", ta, rval_ret_wtxta_empty);
 	
 	T("WTXTA RVAL GLOBAL CWTXTA INIT EMPTY TERMINATED", ta, rval_ret_wtxta_empty_wtxt);
 	T("WTXTA RVAL GLOBAL CWTXTA INIT SIZE KNOWN", ta, rval_ret_wtxta_sz_wtxt);
+	
+	T("WTXTA RVAL GLOBAL CWSTR INIT EMPTY TERMINATED", ta, cwstr_arr_empty_wtxt);
+	T("WTXTA RVAL GLOBAL CWSTR INIT SIZE KNOWN", ta, cwstr_arr_sz_wtxt);
+	T("WTXTA RVAL GLOBAL CWSTR ASS", ta, cwstr_ass);
 }
 {
 	const wchar_t *lval_res_construct_cstra[] = {

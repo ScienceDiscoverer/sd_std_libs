@@ -70,6 +70,7 @@ public:
 	friend FilePrinter & S(FilePrinter &fp);	// Print Space
 	friend FilePrinter & N(FilePrinter &fp);	// Print Newline
 	friend FilePrinter & CR(FilePrinter &fp);	// Print Carriage Return
+	friend FilePrinter & WN(FilePrinter &fp);	// Print Windows Newline (\r\n)
 	friend FilePrinter & PN(FilePrinter &fp);	// Pad next number with '/' ' hundreds/bytes
 	friend FilePrinter & DP(FilePrinter &fp);	// Disable all padding (sets default values)
 	friend FilePrinter & PE(FilePrinter &fp);	// Print last error (GetLastError)
@@ -889,6 +890,12 @@ inline FilePrinter & N(FilePrinter &fp)
 inline FilePrinter & CR(FilePrinter &fp)
 {
 	WriteFile(fp.oh, "\r", 1, &fp.bw, NULL);
+	return fp;
+}
+
+inline FilePrinter & WN(FilePrinter &fp)
+{
+	WriteFile(fp.oh, "\r\n", 2, &fp.bw, NULL);
 	return fp;
 }
 

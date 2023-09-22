@@ -37,25 +37,3 @@ inline FileInfoW FO(const wtxt &fn)
 	fi.fn = fn;
 	return fi;
 }
-
-inline bool64 fileExists(const char *fn)
-{
-	DWORD attr = GetFileAttributesA(fn);
-	if(attr == INVALID_FILE_ATTRIBUTES)
-	{
-		return false;
-	}
-	
-	return true;
-}
-
-inline bool64 fileExists(const wchar_t *fn)
-{
-	DWORD attr = GetFileAttributesW(fn);
-	if(attr == INVALID_FILE_ATTRIBUTES)
-	{
-		return false;
-	}
-	
-	return true;
-}

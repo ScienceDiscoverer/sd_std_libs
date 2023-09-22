@@ -4,6 +4,7 @@
 #include <wtxtp>
 #include <filep>
 #include <filer>
+#include <ftools>
 //#include <filepr>
 
 #include <Mmsystem.h>

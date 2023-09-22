@@ -5,8 +5,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#pragma comment(lib, "user32")
-#pragma comment(lib, "gdi32")
+#pragma comment( lib, "user32" )
+#pragma comment( lib, "gdi32" )
 
 #ifdef DEBUG
 	#pragma comment( lib, "wndintd" )
@@ -19,6 +19,11 @@
 #define HWSIGN(x) ((int)(short)HW(x))
 #define LWSIGN(x) ((int)(short)LW(x))
 #define DPIS(x) ((ui64)((double)x * dpi_scale)) // Scale value for DPI
+
+// GUI initialisation
+
+#define IG_DEFAULT		0	// Default GUI initialisation
+#define IG_CUSTOM_CUR	1	// Window will handle cursor display explicitly
 
 // Window styles
 
@@ -43,9 +48,10 @@ extern HINSTANCE exec_adress;
 extern ATOM main_class;
 extern HWND main_wnd;
 
+extern HDC main_dc;
 extern HFONT default_font;
 extern HBRUSH backgrnd;
-extern HDC main_dc;
+extern COLORREF def_back; 						// 0x00BBGGRR Default background color
 
 extern ui64 cellw, cellh;						// Size of the character cell in pixels
 extern ui64 clw, clh;							// Client width/height
@@ -63,10 +69,16 @@ extern RECT work_pix;							// Working pixels
 extern bool64 topmost;							// Saves current main window's topmost status
 
 // Core interface
-
-ATOM initGui(WNDPROC wnd_proc);
+ATOM initGui(WNDPROC wnd_proc, ui64 opts);
 HWND spawnMainWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y);
 HWND spawnMainWnd(ui64 style, const wchar_t* title, i32 w, i32 h, ui64 pos);
+HWND spawnWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y);
+//HWND spawnKidWnd(ui64 style, const wchar_t* title, i32 w, i32 h, i32 x, i32 y);
+
+inline ATOM initGui(WNDPROC wnd_proc)
+{
+	return initGui(wnd_proc, IG_DEFAULT);
+}
 
 inline void enterMsgLoop()
 {
@@ -123,6 +135,21 @@ inline LRESULT toggleTopmost()
 	{
 		SetWindowPos(main_wnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 		topmost = true;
+	}
+	
+	return 0;
+}
+
+inline LRESULT toggleTopmost(HWND wnd)
+{
+	DWORD ex = (DWORD)GetWindowLongPtr(wnd, GWL_EXSTYLE);
+	if(ex & WS_EX_TOPMOST)
+	{
+		SetWindowPos(wnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+	}
+	else
+	{
+		SetWindowPos(wnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 	}
 	
 	return 0;

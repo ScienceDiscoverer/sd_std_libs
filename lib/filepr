@@ -5,6 +5,9 @@ TODO FEATURES:
 MUST BE ABLE TO SEEK THROUGH FILE
 MUST HAVE SAME READING INTERFACE AS FILEREADER
 
+ADD OPERATOR:
+friend TxtPrinter & WN(TxtPrinter &tp);	// Print Windows Newline (\r\n)
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <utf>

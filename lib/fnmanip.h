@@ -136,3 +136,13 @@ inline wtxt & removeLastDir(wtxt &dir)
 	txtd(dir, txtfe(dir, TEND, '\\'), TEND);
 	return dir;
 }
+
+inline txt & nameFromPath(const txt &path, txt &n)
+{
+	return txts(n, path, txtfe(path, TEND, '\\')+1, TEND);
+}
+
+inline wtxt & nameFromPath(const wtxt &path, wtxt &n)
+{
+	return txts(n, path, txtfe(path, TEND, '\\')+1, TEND);
+}
